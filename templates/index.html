@@ -15,17 +15,17 @@
       <img src="/static/default_logo.png" alt="Chandigarh University Logo" class="brand-logo-img" id="headerLogoImg" style="width: auto; height: 38px; border-radius: 4px; background: white; padding: 2px;">
       <div>
         <h1>Exam Attendance Sheet Generator</h1>
-        <div class="brand-subtitle">EX-12 Format &bull; Multi-Course Sheets &bull; A4 Landscape &bull; Signature Ready</div>
+        <div class="brand-subtitle">Form EX-12 &bull; Multi-Course Sheets &bull; A4 Landscape &bull; Signature Ready</div>
       </div>
     </div>
     <div class="header-actions">
-      <button class="btn btn-secondary btn-sm" id="btnLoadSample" title="Load sample multi-course data">
+      <button class="btn btn-secondary btn-sm" id="btnLoadSample" title="Reset to sample multi-course data">
         🔄 Reset Sample
       </button>
       <button class="btn btn-print" id="btnPrintTop" title="Print sheets in A4 Landscape">
         🖨️ Print Sheets (A4)
       </button>
-      <button class="btn btn-download" id="btnDownloadExcelTop" title="Download Excel with multiple sheets">
+      <button class="btn btn-download" id="btnDownloadExcelTop" title="Download Excel workbook with course-wise sheets">
         📥 Download Excel (.xlsx)
       </button>
     </div>
@@ -43,14 +43,14 @@
           <span>📁 Multi-File Upload (Course-Wise Sheets)</span>
         </div>
         <p style="font-size: 0.78rem; color: #15803d; margin-bottom: 8px;">
-          Ek saath <b>multiple Excel/CSV files</b> upload karein. Har file se automatic course-wise sheet ban jayegi:
+          Upload one or multiple Excel / CSV bifurcation sheets to auto-generate course sheets:
         </p>
         
         <!-- Drag and Drop Zone -->
         <div id="dropZone" style="border: 2px dashed #86efac; border-radius: 8px; padding: 14px; text-align: center; background: white; cursor: pointer; transition: all 0.2s;">
           <div style="font-size: 1.4rem; margin-bottom: 4px;">📂</div>
-          <div style="font-weight: 700; font-size: 0.85rem; color: #166534;">Click ya Drop Multiple Files Here</div>
-          <div style="font-size: 0.72rem; color: #65a30d; margin-top: 2px;">(Select 1, 5, 10+ Excel files together)</div>
+          <div style="font-weight: 700; font-size: 0.85rem; color: #166534;">Click or Drop Multiple Files Here</div>
+          <div style="font-size: 0.72rem; color: #65a30d; margin-top: 2px;">(Select 1, 5, 10+ Excel / CSV files at once)</div>
           <input type="file" id="multiFileInput" multiple accept=".xlsx,.xls,.csv" style="display: none;">
         </div>
 
@@ -62,7 +62,7 @@
             <input type="radio" name="uploadMode" value="append"> Add to Existing
           </label>
           <button class="btn btn-secondary btn-sm" id="btnLoadLocalBifurcation" style="padding: 2px 6px; font-size: 0.72rem;">
-            ⚡ Quick Local File
+            ⚡ Local File
           </button>
         </div>
 
@@ -129,7 +129,7 @@
       <!-- Course Sheets Management -->
       <div class="section-box">
         <div class="section-title">
-          <span>📚 Course Sheets (Multiple Sheets)</span>
+          <span>📚 Course Sheets (Multi-Sheet Tabs)</span>
           <button class="btn btn-primary btn-sm" id="btnAddCourse">+ Add Course</button>
         </div>
         
@@ -168,7 +168,7 @@
             <!-- Handwritten Mode Switch -->
             <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 0.78rem; color: #92400e; font-weight: 600;">
-                ✍️ Handwritten Mode (Date &amp; Sub Code haath se likhne ke liye blank rakhein)
+                ✍️ Handwritten Mode (Leave Date &amp; Sub Code blank for handwriting)
               </span>
               <input type="checkbox" id="checkHandwrittenMode" checked style="cursor: pointer; transform: scale(1.15);">
             </div>
@@ -190,12 +190,12 @@
           <!-- Students UIDs Input -->
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label for="inputUids" style="margin: 0;">Student UIDs (Baccho ki List)</label>
+              <label for="inputUids" style="margin: 0;">Student UIDs (Roll Numbers)</label>
               <span id="studentStatsBadge" style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a;">
                 8 Students (1 Page)
               </span>
             </div>
-            <textarea id="inputUids" class="form-control" rows="6" placeholder="Paste UIDs here (one per line or comma separated)&#10;e.g.&#10;22BCS1001&#10;22BCS1002&#10;22BCS1003"></textarea>
+            <textarea id="inputUids" class="form-control" rows="6" placeholder="Paste UIDs here (one per line or comma/tab separated)&#10;e.g.&#10;22BCS1001&#10;22BCS1002&#10;22BCS1003"></textarea>
             <div style="display: flex; justify-content: space-between; margin-top: 6px;">
               <button class="btn btn-secondary btn-sm" id="btnAddSampleStudents">Add 8 Sample UIDs</button>
               <button class="btn btn-secondary btn-sm" id="btnClearStudents" style="color: #dc2626;">Clear</button>
@@ -225,14 +225,14 @@
             <label for="selectStudentsPerPage">Students per Page</label>
             <select id="selectStudentsPerPage" class="form-control">
               <option value="8" selected>8 Students (EX-12 Standard)</option>
-              <option value="6">6 Students (More space)</option>
+              <option value="6">6 Students (Extra Height)</option>
               <option value="10">10 Students (Dense)</option>
             </select>
           </div>
           <div class="form-group">
             <label for="selectPrintScope">Print Scope</label>
             <select id="selectPrintScope" class="form-control">
-              <option value="all" selected>All Courses (Saare Course)</option>
+              <option value="all" selected>All Courses (Complete Workbook)</option>
               <option value="current">Current Course Only</option>
             </select>
           </div>

@@ -1,4 +1,4 @@
-// Exam Attendance Sheet App - Frontend Logic
+// Exam Attendance Sheet App - Frontend Logic (English)
 
 let appData = {
   settings: {
@@ -100,7 +100,7 @@ function setupEventListeners() {
   document.getElementById('checkHandwrittenMode').addEventListener('change', (e) => {
     appData.settings.handwritten_mode = e.target.checked;
     renderPreview();
-    showToast(e.target.checked ? "Handwritten mode ON: Date & Sub Code blank for pen writing" : "Handwritten mode OFF");
+    showToast(e.target.checked ? "Handwritten mode ON: Date & Sub Code ready for pen handwriting" : "Handwritten mode OFF");
   });
 
   document.getElementById('btnMakeBlankDates').addEventListener('click', () => {
@@ -112,7 +112,7 @@ function setupEventListeners() {
     document.getElementById('checkHandwrittenMode').checked = true;
     renderDatesTable(c);
     renderPreview();
-    showToast("Cleared Dates & Sub Codes for handwriting");
+    showToast("Cleared Dates & Subject Codes for handwriting");
   });
 
   document.getElementById('selectStudentsPerPage').addEventListener('change', (e) => {
@@ -452,7 +452,7 @@ function addSampleStudents() {
   updateStudentStats();
   renderCourseTabs();
   renderPreview();
-  showToast("Added 8 sample students");
+  showToast("Added 8 sample student UIDs");
 }
 
 function autoFillDates() {
@@ -477,7 +477,7 @@ function autoFillDates() {
   document.getElementById('checkHandwrittenMode').checked = false;
   renderDatesTable(course);
   renderPreview();
-  showToast("Auto-filled dates & codes");
+  showToast("Auto-filled examination dates & codes");
 }
 
 async function handleLogoUpload(e) {
@@ -551,7 +551,7 @@ async function handleMultiFileUpload(fileList) {
 
     const statusBadge = document.getElementById('uploadStatusBadge');
     statusBadge.style.display = 'block';
-    statusBadge.innerHTML = `✅ <b>${result.files_processed} file(s)</b> se <b>${result.total_courses} course sheet(s)</b> create ho gayi (${result.total_students} students total)!`;
+    statusBadge.innerHTML = `✅ <b>${result.files_processed} file(s)</b> processed: <b>${result.total_courses} course sheet(s)</b> created (${result.total_students} students total)!`;
 
     showToast(`Success: Created ${result.total_courses} course sheets from ${result.files_processed} files!`);
   } catch (err) {
@@ -634,14 +634,12 @@ function generatePageHtml(course, pageIndex, totalPages) {
   const startIdx = pageIndex * spp;
   const pageStudents = students.slice(startIdx, startIdx + spp);
 
-  // Scaled logo for Chandigarh University
   const logoHtml = (s.show_logo && s.logo_url) 
     ? `<img src="${s.logo_url}" alt="Chandigarh University Logo" style="max-height: 100%; max-width: 100%; object-fit: contain;">` 
     : '';
 
   let tableRowsHtml = '';
 
-  // Dates and Sub Code header cells with handwritten dotted lines when blank
   let dateThs = '';
   let subCodeThs = '';
   for (let i = 0; i < 8; i++) {
@@ -760,7 +758,7 @@ function generatePageHtml(course, pageIndex, totalPages) {
 async function downloadExcel() {
   saveFormToActiveCourse();
 
-  showToast("Generating Multi-Sheet Excel file...");
+  showToast("Generating Multi-Sheet Excel workbook...");
   try {
     const payload = {
       settings: appData.settings,

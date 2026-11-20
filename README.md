@@ -1,46 +1,79 @@
 # 📋 Exam Attendance Sheet Generator (Form EX-12)
-### Course-Wise Multi-Sheet Excel & A4 Landscape Print Ready App
+### Professional Multi-Course Excel Workbook & A4 Landscape Print Ready Application
 
-Yeh application Chandigarh University aur anya institutes ke examination attendance sheet (Form EX-12) format ke according design ki gayi hai.
-
----
-
-## 🚀 App Kaise Open / Run Karein:
-Server abhi **running** hai:
-👉 **[http://127.0.0.1:5001](http://127.0.0.1:5001)**
-
-Agar future me dobara start karna ho:
-```bash
-./start.sh
-# ya fir
-python3 app.py
-```
+A lightweight, automated web application tailored for universities and academic institutions (such as Chandigarh University) to generate official examination theory attendance sheets (Form EX-12).
 
 ---
 
-## ✨ Features & Capabilities
+## 🌟 Key Features
 
-1. **Course-Wise Multiple Sheets (Ek hi Excel File me)**:
-   - Aap jitne chahein courses (jaise `CSE/IOT`, `CSE/AI`, `ECE`, `ME`) add kar sakte hain.
-   - Jab aap **"Download Excel (.xlsx)"** button click karenge, toh ek hi Excel workbook download hogi jisme **har course ki alag-alag sheet (tab)** hogi!
+1. **Course-Wise Multi-Sheet Excel Generation**:
+   - Creates a single consolidated `.xlsx` workbook containing individual tabs/sheets for each course (e.g. `CSE-IOT`, `CSE-AI`, `ECE`, `ME`).
+   - Each course worksheet is independently paginated (8 students per page block) with repeating headers and footers.
 
-2. **A4 Landscape Margin & Print Setup**:
-   - Excel file me page setup pehle se **A4 Landscape** mode me set hai.
-   - Narrow margins (0.25 inch) set hain taaki sabhi 8 exam dates and subjects bina cut hue 1 page width par fit aayein.
-   - Automatic row page breaks hain taaki har 8 students ke baad agla page clean start ho.
-   - Web App me bhi **"Print Sheets (A4)"** button hai jisse direct browser print dialog se A4 Landscape me perfect print out nikal sakte hain (`window.print()` with `@page { size: A4 landscape }`).
+2. **Strict A4 Landscape Print Setup (Zero Spillover)**:
+   - Configured with `fitToWidth = 1` and `fitToHeight = num_pages`.
+   - Narrow margins (0.2 in / 5mm) and strict 180mm height budgeting guarantee that **every single attendance sheet prints on exactly 1 page**, with no table clipping and no blank trailing pages.
 
-3. **Baccho ke Signature ke Liye Proper Space**:
-   - Har student ke liye 3 rows hain:
+3. **Handwritten Exam Date & Subject Code Mode**:
+   - Built-in **"✍️ Handwritten Mode"** formats examination dates as `Date: ____________` and subject code cells with dedicated space so invigilators and faculty can write dates and codes with a pen.
+
+4. **Signature-Ready Student Rows**:
+   - Formatted in standard Form EX-12 layout:
      * `* A/B No.` (Answer Book Number)
      * `OMR No.`
-     * `Signature` (Student Signature row ki height 26-28pt rakhi gayi hai taaki bacche araam se pen se sign kar sakein).
+     * `Signature` (Enlarged row height for student physical signatures)
+   - Invigilator signature grid and Centre Superintendent verification footer.
 
-4. **Logo Option**:
-   - Header me University / College Logo ka poora support hai.
-   - Aap apna custom logo (PNG / JPG / WebP) upload kar sakte hain ya built-in Chandigarh University Emblem use kar sakte hain.
-   - Logo web print preview me aur Excel (.xlsx) file ke header me auto-embed ho jata hai.
+5. **Batch Multi-File & Bifurcation Sheet Upload**:
+   - Drag & drop multiple Excel/CSV files simultaneously.
+   - Automatically detects Course Name, Section, Semester, Subject Codes, and Student Roll Numbers (UIDs).
 
-5. **1-Click Bifurcation Sheet & Excel Import**:
-   - Folder me rakhi `24BCS_WD_CT-717_24CSP-304_Bifurcation_Sheet.xlsx` ko ek click me load karne ke liye button diya gaya hai.
-   - Kisi bhi student list ya Excel/CSV ko drag-and-drop karke UIDs auto-extract ki ja sakti hain.
+6. **Official Institutional Logo Integration**:
+   - Embeds high-resolution university emblems (Chandigarh University official logo included) into both web print previews and downloadable Excel files.
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Installation
+Clone the repository and install the dependencies:
+```bash
+git clone https://github.com/kuldeepe13820-cell/exam-attendance-generator.git
+cd exam-attendance-generator
+pip install -r requirements.txt
+```
+
+### 2. Run the Application
+Start the Flask web server:
+```bash
+python3 app.py
+# or using the shell script
+./start.sh
+```
+
+Open your browser and navigate to:
+👉 **[http://127.0.0.1:5001](http://127.0.0.1:5001)**
+
+---
+
+## 🌐 Network & Cloud Deployment
+
+### Run on Local Wi-Fi Network
+Because the server listens on `0.0.0.0:5001`, any device on the same local network (laptops, phones, lab PCs) can access the app by browsing to:
+```
+http://<YOUR_LOCAL_IP>:5001
+```
+
+### Deploy to Render / Railway (Free 24/7 Cloud Hosting)
+1. Sign in to [Render.com](https://render.com) using GitHub.
+2. Click **New Web Service** and select this repository (`exam-attendance-generator`).
+3. Set the configuration:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn app:app`
+4. Click **Deploy Web Service** to receive a public URL accessible from anywhere.
+
+---
+
+## 📄 License
+This project is open-source and available under the [MIT License](LICENSE).
