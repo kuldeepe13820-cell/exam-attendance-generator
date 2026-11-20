@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Attendance Sheet Generator (EX-12) | A4 Landscape Multi-Course</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" type="image/png" href="/static/default_logo.png">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header no-print">
+    <div class="brand">
+      <img src="/static/default_logo.png" alt="Chandigarh University Logo" class="brand-logo-img" id="headerLogoImg" style="width: auto; height: 38px; border-radius: 4px; background: white; padding: 2px;">
+      <div>
+        <h1>Exam Attendance Sheet Generator</h1>
+        <div class="brand-subtitle">EX-12 Format &bull; Multi-Course Sheets &bull; A4 Landscape &bull; Signature Ready</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary btn-sm" id="btnLoadSample" title="Load sample multi-course data">
+        🔄 Reset Sample
+      </button>
+      <button class="btn btn-print" id="btnPrintTop" title="Print sheets in A4 Landscape">
+        🖨️ Print Sheets (A4)
+      </button>
+      <button class="btn btn-download" id="btnDownloadExcelTop" title="Download Excel with multiple sheets">
+        📥 Download Excel (.xlsx)
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Body Grid -->
+  <div class="app-body">
+
+    <!-- Controls Sidebar -->
+    <aside class="controls-sidebar no-print">
+      
+      <!-- Multiple File Upload Section -->
+      <div class="section-box" style="background: #f0fdf4; border-color: #bbf7d0;">
+        <div class="section-title" style="color: #166534; margin-bottom: 6px;">
+          <span>📁 Multi-File Upload (Course-Wise Sheets)</span>
+        </div>
+        <p style="font-size: 0.78rem; color: #15803d; margin-bottom: 8px;">
+          Ek saath <b>multiple Excel/CSV files</b> upload karein. Har file se automatic course-wise sheet ban jayegi:
+        </p>
+        
+        <!-- Drag and Drop Zone -->
+        <div id="dropZone" style="border: 2px dashed #86efac; border-radius: 8px; padding: 14px; text-align: center; background: white; cursor: pointer; transition: all 0.2s;">
+          <div style="font-size: 1.4rem; margin-bottom: 4px;">📂</div>
+          <div style="font-weight: 700; font-size: 0.85rem; color: #166534;">Click ya Drop Multiple Files Here</div>
+          <div style="font-size: 0.72rem; color: #65a30d; margin-top: 2px;">(Select 1, 5, 10+ Excel files together)</div>
+          <input type="file" id="multiFileInput" multiple accept=".xlsx,.xls,.csv" style="display: none;">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.75rem;">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #166534;">
+            <input type="radio" name="uploadMode" value="replace" checked> Replace Existing
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #166534;">
+            <input type="radio" name="uploadMode" value="append"> Add to Existing
+          </label>
+          <button class="btn btn-secondary btn-sm" id="btnLoadLocalBifurcation" style="padding: 2px 6px; font-size: 0.72rem;">
+            ⚡ Quick Local File
+          </button>
+        </div>
+
+        <div id="uploadStatusBadge" style="display: none; margin-top: 8px; font-size: 0.76rem; background: #dcfce7; color: #14532d; padding: 4px 8px; border-radius: 4px; font-weight: 600;"></div>
+      </div>
+
+      <!-- Institute & Examination Details -->
+      <div class="section-box">
+        <div class="section-title">
+          <span>🏛️ University &amp; Exam Details</span>
+        </div>
+
+        <div class="form-group">
+          <label for="inputInstName">Institute / University Name</label>
+          <input type="text" id="inputInstName" class="form-control" value="CHANDIGARH UNIVERSITY, GHARUAN (MOHALI)">
+        </div>
+
+        <div class="form-group">
+          <label for="inputExamTitle">Exam Title / Session</label>
+          <input type="text" id="inputExamTitle" class="form-control" value="ATTENDANCE SHEET FOR THEORY (REGULAR) EXAMINATION MAY-JUNE 2024">
+        </div>
+
+        <div class="grid-3">
+          <div class="form-group">
+            <label for="inputFormCode">Form Code</label>
+            <input type="text" id="inputFormCode" class="form-control" value="EX-12">
+          </div>
+          <div class="form-group">
+            <label for="inputCentreBlock">Centre / Block No</label>
+            <input type="text" id="inputCentreBlock" class="form-control" value="B1 (Morning)">
+          </div>
+          <div class="form-group">
+            <label for="inputShiftTime">Shift Time</label>
+            <input type="text" id="inputShiftTime" class="form-control" value="9:30 AM - 12:30 PM">
+          </div>
+        </div>
+
+        <!-- Logo Controls -->
+        <div class="form-group" style="margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="margin: 0; font-weight: 600;">Institute Logo (Excel &amp; Print)</label>
+            <label style="font-size: 0.78rem; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" id="checkShowLogo" checked> Show Logo
+            </label>
+          </div>
+          <div class="logo-controls">
+            <div class="logo-preview-box" style="width: 80px; height: 48px;">
+              <img id="logoPreviewImg" src="/static/default_logo.png" alt="Logo Preview" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+            </div>
+            <div class="logo-btn-group">
+              <label class="btn btn-secondary btn-sm" style="text-align: center; cursor: pointer;">
+                📷 Upload Another Logo
+                <input type="file" id="logoFileInput" accept="image/*" style="display: none;">
+              </label>
+              <div style="display: flex; gap: 4px;">
+                <button class="btn btn-secondary btn-sm" id="btnResetLogo" style="flex: 1;">CU Official</button>
+                <button class="btn btn-secondary btn-sm" id="btnRemoveLogo" style="flex: 1; color: #dc2626;">Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Course Sheets Management -->
+      <div class="section-box">
+        <div class="section-title">
+          <span>📚 Course Sheets (Multiple Sheets)</span>
+          <button class="btn btn-primary btn-sm" id="btnAddCourse">+ Add Course</button>
+        </div>
+        
+        <!-- Course Tabs in sidebar -->
+        <div class="course-tabs-header" id="courseTabsContainer">
+          <!-- Dynamic course tabs inserted here -->
+        </div>
+
+        <!-- Active Course Settings -->
+        <div id="activeCourseSettings">
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="inputCourseName">Course / Branch</label>
+              <input type="text" id="inputCourseName" class="form-control" placeholder="e.g. CSE/IOT">
+            </div>
+            <div class="form-group">
+              <label for="inputSemester">Semester</label>
+              <input type="text" id="inputSemester" class="form-control" placeholder="e.g. 5">
+            </div>
+          </div>
+
+          <!-- Subject Codes & Dates Grid (8 Columns) -->
+          <div class="form-group" style="margin-top: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label style="margin: 0; font-weight: 700;">Exam Dates &amp; Subject Codes</label>
+              <div style="display: flex; gap: 4px;">
+                <button class="btn btn-secondary btn-sm" id="btnMakeBlankDates" style="font-size: 0.72rem; padding: 2px 6px; color: #b45309;" title="Set blank for pen handwriting">
+                  ✍️ Clear (Handwritten)
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btnAutoDates" style="font-size: 0.72rem; padding: 2px 6px;">
+                  ⚡ Quick Fill
+                </button>
+              </div>
+            </div>
+
+            <!-- Handwritten Mode Switch -->
+            <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.78rem; color: #92400e; font-weight: 600;">
+                ✍️ Handwritten Mode (Date &amp; Sub Code haath se likhne ke liye blank rakhein)
+              </span>
+              <input type="checkbox" id="checkHandwrittenMode" checked style="cursor: pointer; transform: scale(1.15);">
+            </div>
+
+            <table class="dates-table">
+              <thead>
+                <tr>
+                  <th style="width: 28px;">#</th>
+                  <th>Exam Date</th>
+                  <th>Subject Code</th>
+                </tr>
+              </thead>
+              <tbody id="datesTableBody">
+                <!-- 8 rows dynamically rendered -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Students UIDs Input -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label for="inputUids" style="margin: 0;">Student UIDs (Baccho ki List)</label>
+              <span id="studentStatsBadge" style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a;">
+                8 Students (1 Page)
+              </span>
+            </div>
+            <textarea id="inputUids" class="form-control" rows="6" placeholder="Paste UIDs here (one per line or comma separated)&#10;e.g.&#10;22BCS1001&#10;22BCS1002&#10;22BCS1003"></textarea>
+            <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+              <button class="btn btn-secondary btn-sm" id="btnAddSampleStudents">Add 8 Sample UIDs</button>
+              <button class="btn btn-secondary btn-sm" id="btnClearStudents" style="color: #dc2626;">Clear</button>
+            </div>
+          </div>
+
+          <!-- Course Operations -->
+          <div style="display: flex; gap: 8px; margin-top: 12px; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
+            <button class="btn btn-secondary btn-sm" id="btnDuplicateCourse" style="flex: 1;">
+              📋 Duplicate Course
+            </button>
+            <button class="btn btn-danger btn-sm" id="btnDeleteCourse" style="flex: 1;">
+              🗑️ Delete Course
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Print & Page Layout Settings -->
+      <div class="section-box">
+        <div class="section-title">
+          <span>📐 Page &amp; Print Options</span>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="selectStudentsPerPage">Students per Page</label>
+            <select id="selectStudentsPerPage" class="form-control">
+              <option value="8" selected>8 Students (EX-12 Standard)</option>
+              <option value="6">6 Students (More space)</option>
+              <option value="10">10 Students (Dense)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="selectPrintScope">Print Scope</label>
+            <select id="selectPrintScope" class="form-control">
+              <option value="all" selected>All Courses (Saare Course)</option>
+              <option value="current">Current Course Only</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="checkFillEmpty" checked>
+            Always fill page to standard slots (Blank rows for missing students)
+          </label>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Right Live Preview Area -->
+    <main class="preview-container">
+      
+      <!-- Preview Control Toolbar -->
+      <div class="preview-toolbar no-print">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 700; font-size: 0.85rem; color: #1e293b;">Active Sheet:</span>
+          <select id="previewCourseSelect" class="form-control" style="width: auto; padding: 4px 10px; font-weight: 600;">
+            <!-- Dynamic course options -->
+          </select>
+        </div>
+
+        <div style="height: 20px; width: 1px; background: #cbd5e1;"></div>
+
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button class="btn btn-secondary btn-sm" id="btnPrevPage">◀ Prev</button>
+          <span class="page-indicator" id="pageIndicatorText">Page 1 of 1</span>
+          <button class="btn btn-secondary btn-sm" id="btnNextPage">Next ▶</button>
+          <button class="btn btn-secondary btn-sm" id="btnShowAllPages" style="margin-left: 6px;">Show All Pages</button>
+        </div>
+
+        <div style="height: 20px; width: 1px; background: #cbd5e1;"></div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 0.8rem; color: #64748b;">Zoom:</span>
+          <select id="zoomSelect" class="form-control" style="width: auto; padding: 3px 8px; font-size: 0.8rem;">
+            <option value="0.75">75%</option>
+            <option value="0.85" selected>85% (Fit)</option>
+            <option value="1.0">100% (Actual)</option>
+            <option value="1.15">115%</option>
+          </select>
+        </div>
+
+        <div style="height: 20px; width: 1px; background: #cbd5e1;"></div>
+
+        <button class="btn btn-print btn-sm" id="btnPrintCurrent">
+          🖨️ Print (A4)
+        </button>
+        <button class="btn btn-download btn-sm" id="btnDownloadExcel">
+          📥 Download .xlsx
+        </button>
+      </div>
+
+      <!-- Paper Wrapper (A4 Landscape) -->
+      <div class="paper-wrapper" id="paperWrapper">
+        <!-- Rendered sheet pages will appear here -->
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast" style="position: fixed; bottom: 24px; right: 24px; z-index: 1000; background: #1e293b; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: none; font-size: 0.9rem; align-items: center; gap: 8px;">
+    <span id="toastMsg">Notification</span>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
