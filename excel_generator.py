@@ -48,10 +48,10 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
     Builds a complete, print-ready course attendance sheet in ws.
     Includes A4 Landscape page setup, exact EX-12 header, student signature rows,
     invigilator block, and superintendent footer.
-    Row heights are strictly budgeted to guarantee 1 single page per 8 students!
+    Default: 7 UIDs per sheet with IDENTICAL box widths and generous signature space!
     """
     students = course_data.get('students', [])
-    students_per_page = int(global_settings.get('students_per_page', 8))
+    students_per_page = int(global_settings.get('students_per_page', 7))
     fill_empty = global_settings.get('fill_empty_slots', True)
 
     total_students = len(students)
@@ -77,11 +77,12 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
     ws.print_options.horizontalCentered = True
     ws.print_options.verticalCentered = True
 
-    # 2. Column Dimensions (A to J = 10 columns)
+    # 2. Column Dimensions - EQUAL BOX WIDTHS FOR ALL 8 EXAM COLUMNS
     ws.column_dimensions['A'].width = 15.5  # UID No.
-    ws.column_dimensions['B'].width = 13.0  # Semester / Label
+    ws.column_dimensions['B'].width = 13.5  # Semester / Label
+    # Identical width for all 8 exam columns C to J
     for c in ['C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
-        ws.column_dimensions[c].width = 13.0  # 8 exam dates & codes
+        ws.column_dimensions[c].width = 13.0
 
     # Extract global settings
     institute_name = global_settings.get('institute_name', 'CHANDIGARH UNIVERSITY, GHARUAN (MOHALI)').strip()
@@ -92,7 +93,7 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
     show_logo = global_settings.get('show_logo', True)
     handwritten_mode = global_settings.get('handwritten_mode', True)
 
-    course_name = course_data.get('course_name', 'CSE/IOT').strip()
+    course_name = course_data.get('course_name', 'CSE').strip()
     section = course_data.get('section', '').strip()
     semester = str(course_data.get('semester', '5')).strip()
 
@@ -128,7 +129,7 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
         cell_ex.font = Font(name='Arial', size=10, bold=True)
         cell_ex.alignment = Alignment(horizontal='right', vertical='center')
 
-        # Add Logo on top left if enabled
+        # Add Logo on top left if enabled (scale nicely for Chandigarh University rectangular emblem)
         if show_logo and logo_path and os.path.exists(logo_path):
             try:
                 xl_img = XLImage(logo_path)
@@ -220,7 +221,7 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
 
         apply_range_style(ws, f'A{R_h1}:J{R_h2}', border=table_border, fill=header_fill)
 
-        # --- Students (8 students per page block) ---
+        # --- Students (Default 7 UIDs per page block) ---
         page_start_student = page_idx * students_per_page
         for s_idx in range(students_per_page):
             student_global_idx = page_start_student + s_idx
@@ -231,9 +232,10 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
                 break
 
             sr = R_h2 + 1 + (s_idx * 3)
-            ws.row_dimensions[sr].height = 13.0
-            ws.row_dimensions[sr + 1].height = 13.0
-            ws.row_dimensions[sr + 2].height = 21.0  # signature row
+            # Budgeted heights for 7 UIDs: 14pt + 14pt + 25pt = 53pt per student (roomy signature box!)
+            ws.row_dimensions[sr].height = 14.0
+            ws.row_dimensions[sr + 1].height = 14.0
+            ws.row_dimensions[sr + 2].height = 25.0  # Roomy signature box!
 
             # Merge UID column across the 3 rows
             ws.merge_cells(f'A{sr}:A{sr + 2}')
@@ -258,10 +260,10 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
 
             apply_range_style(ws, f'A{sr}:J{sr + 2}', border=table_border)
 
-        # --- Footer 1: Invigilator's Signature & Emp.ID (20 pt) ---
+        # --- Footer 1: Invigilator's Signature & Emp.ID (22 pt) ---
         actual_students_drawn = students_per_page if fill_empty else min(students_per_page, max(1, total_students - page_start_student))
         R_inv = R_h2 + 1 + (actual_students_drawn * 3)
-        ws.row_dimensions[R_inv].height = 20.0
+        ws.row_dimensions[R_inv].height = 22.0
 
         ws.merge_cells(f'A{R_inv}:B{R_inv}')
         c_inv = ws.cell(R_inv, 1, "Invigilator's Signature & Emp.ID :-")
@@ -274,9 +276,9 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
 
         apply_range_style(ws, f'A{R_inv}:J{R_inv}', border=table_border, fill=header_fill)
 
-        # --- Footer 2: Note & Centre Supdt. Sign (14 pt) ---
+        # --- Footer 2: Note & Centre Supdt. Sign (16 pt) ---
         R_sup = R_inv + 1
-        ws.row_dimensions[R_sup].height = 14.0
+        ws.row_dimensions[R_sup].height = 16.0
 
         ws.merge_cells(f'A{R_sup}:D{R_sup}')
         c_note = ws.cell(R_sup, 1, "Note: *A/B stands for Answer Book No.")
@@ -324,7 +326,7 @@ def generate_attendance_workbook(data):
         raw_name = course_data.get('course_name', 'Course')
         section = course_data.get('section', '')
         
-        # Build concise tab name (e.g. CSE_CT-717 or CS201_CT-717)
+        # Build concise tab name (e.g. CSE_CT-717)
         if section and section.lower() not in raw_name.lower():
             tab_base = f"{raw_name}_{section}"
         else:
@@ -381,7 +383,6 @@ def parse_single_file(file_bytes, filename):
         content = file_bytes.decode('utf-8', errors='ignore')
         reader = list(csv.reader(content.splitlines()))
         
-        # Check header
         uid_col = 0
         course_col = None
         sec_col = None
@@ -476,7 +477,6 @@ def parse_single_file(file_bytes, filename):
                 if val is not None:
                     s_val = str(val).strip()
                     if s_val and s_val.lower() not in ['uid', 'roll no', 'total', 'average', 'none', 's.no.', 's.no']:
-                        # Row-level override if columns exist
                         row_sec = str(ws.cell(r, sec_col).value or '').strip() if sec_col else section_name
                         row_course = str(ws.cell(r, course_col).value or '').strip() if course_col else course_name
 
@@ -500,13 +500,11 @@ def group_and_sort_student_entries(entries):
     if not entries:
         return []
 
-    # Group by (course, section)
     grouped = {}
     for item in entries:
         c_raw = (item['course'] or 'Course').strip()
         s_raw = (item['section'] or 'Sec-1').strip()
         
-        # Clean up course name if it's CS201 / program code
         if 'CS201' in c_raw:
             course = "CSE"
         elif 'CS202' in c_raw:
@@ -538,7 +536,6 @@ def group_and_sort_student_entries(entries):
             grouped[key]['students_set'].add(uid)
             grouped[key]['students'].append(uid)
 
-    # Convert to list
     course_list = list(grouped.values())
 
     # 1. Sort Courses naturally, then Sections naturally!
@@ -550,10 +547,9 @@ def group_and_sort_student_entries(entries):
     # 2. Sort UIDs naturally within each section!
     for idx, c in enumerate(course_list):
         c['students'].sort(key=natural_sort_key)
-        del c['students_set']  # cleanup set
+        del c['students_set']
         c['id'] = f"course_sec_{idx+1}_{os.urandom(2).hex()}"
         
-        # Ensure 8 dates & sub codes blank for handwriting
         if len(c['sub_codes']) < 8:
             c['sub_codes'] = c['sub_codes'] + [''] * (8 - len(c['sub_codes']))
         c['sub_codes'] = c['sub_codes'][:8]
@@ -562,6 +558,5 @@ def group_and_sort_student_entries(entries):
     return course_list
 
 def parse_uploaded_spreadsheet(file_bytes, filename):
-    """Parses a single file and returns course-wise and section-wise sorted sheets."""
     entries = parse_single_file(file_bytes, filename)
     return group_and_sort_student_entries(entries)

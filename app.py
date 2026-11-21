@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 import excel_generator
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
-app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024  # 64MB max for batch uploads
+app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -22,7 +22,7 @@ SAMPLE_DATA = {
         "show_logo": True,
         "logo_path": DEFAULT_LOGO,
         "logo_url": "/static/default_logo.png",
-        "students_per_page": 8,
+        "students_per_page": 7,
         "fill_empty_slots": True,
         "handwritten_mode": True
     },
@@ -36,7 +36,7 @@ SAMPLE_DATA = {
             "sub_codes": ["", "", "", "", "", "", "", ""],
             "students": [
                 "22BCS1001", "22BCS1002", "22BCS1003", "22BCS1004",
-                "22BCS1005", "22BCS1006", "22BCS1007", "22BCS1008"
+                "22BCS1005", "22BCS1006", "22BCS1007"
             ]
         },
         {
@@ -47,8 +47,8 @@ SAMPLE_DATA = {
             "dates": ["", "", "", "", "", "", "", ""],
             "sub_codes": ["", "", "", "", "", "", "", ""],
             "students": [
-                "22BCS1009", "22BCS1010", "22BCS1011", "22BCS1012",
-                "22BCS1013", "22BCS1014", "22BCS1015", "22BCS1016"
+                "22BCS1008", "22BCS1009", "22BCS1010", "22BCS1011",
+                "22BCS1012", "22BCS1013", "22BCS1014"
             ]
         },
         {
@@ -60,7 +60,7 @@ SAMPLE_DATA = {
             "sub_codes": ["", "", "", "", "", "", "", ""],
             "students": [
                 "22AIM1001", "22AIM1002", "22AIM1003", "22AIM1004",
-                "22AIM1005", "22AIM1006", "22AIM1007", "22AIM1008"
+                "22AIM1005", "22AIM1006", "22AIM1007"
             ]
         }
     ]
@@ -92,10 +92,6 @@ def load_local_bifurcation():
 
 @app.route('/api/upload_multiple_files', methods=['POST'])
 def upload_multiple_files():
-    """
-    Accepts multiple uploaded Excel / CSV files.
-    Parses every file/sheet, groups students by Course, and sorts Section-wise and UID-wise!
-    """
     files = request.files.getlist('files')
     if not files:
         files = request.files.getlist('file')
@@ -103,7 +99,7 @@ def upload_multiple_files():
     if not files or len(files) == 0:
         return jsonify({"success": False, "error": "No files uploaded."}), 400
 
-    mode = request.form.get('mode', 'replace')  # 'replace' or 'append'
+    mode = request.form.get('mode', 'replace')
     all_entries = []
     file_summaries = []
 
@@ -128,7 +124,6 @@ def upload_multiple_files():
             "error": "No student UIDs found in uploaded files. Please check file format."
         }), 400
 
-    # Auto group by Course and automatically sort Section-wise and UID-wise!
     sorted_courses = excel_generator.group_and_sort_student_entries(all_entries)
 
     return jsonify({
@@ -175,7 +170,7 @@ def generate_excel():
         
         form = data.get('settings', {}).get('form_code', 'EX-12')
         courses_count = len(data.get('courses', []))
-        download_name = f"Exam_Attendance_Sheets_{form}_{courses_count}_Courses_SectionWise.xlsx"
+        download_name = f"Exam_Attendance_Sheets_{form}_{courses_count}_Sheets_7UIDs.xlsx"
 
         return send_file(
             excel_stream,
