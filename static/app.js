@@ -468,6 +468,18 @@ function loadCourseIntoForm(courseId) {
   document.getElementById('inputSemester').value = course.semester || '5';
   document.getElementById('inputUids').value = (course.students || []).join('\n');
 
+  // Sync auto-fetch section dropdown to match active course section
+  const secSelect = document.getElementById('filterSectionSelect');
+  if (secSelect && course.section) {
+    for (let i = 0; i < secSelect.options.length; i++) {
+      const optVal = secSelect.options[i].value;
+      if (optVal === course.section || (optVal !== 'all' && (course.section.includes(optVal) || optVal.includes(course.section)))) {
+        secSelect.selectedIndex = i;
+        break;
+      }
+    }
+  }
+
   renderDatesTable(course);
   updateStudentStats();
 }
@@ -707,13 +719,12 @@ async function handleMultiFileUpload(fileList) {
     }
 
     appData.previewPage = 0;
-    renderCourseTabs();
-    loadCourseIntoForm(appData.activeCourseId);
-    renderPreview();
-
     if (result.metadata && result.raw_records) {
       populateFilterDropdowns(result.metadata, result.raw_records);
     }
+    renderCourseTabs();
+    loadCourseIntoForm(appData.activeCourseId);
+    renderPreview();
 
     const statusBadge = document.getElementById('uploadStatusBadge');
     statusBadge.style.display = 'block';
@@ -837,19 +848,39 @@ function updateSectionDropdownForSubject() {
     }).map(s => ({ name: s, count: secCounts[s] }));
   }
 
+  const currentActiveCourse = getActiveCourse();
+  const currentSection = currentActiveCourse ? (currentActiveCourse.section || '') : '';
+
   if (availableSections.length === 0) {
     secSelect.innerHTML = '<option value="all">All Sections</option>';
   } else {
     if (availableSections.length > 1) {
       secSelect.innerHTML += '<option value="all">All Sections</option>';
     }
+    let matched = false;
     availableSections.forEach((sec, idx) => {
       const opt = document.createElement('option');
       opt.value = sec.name;
       opt.innerText = `${sec.name} (${sec.count} students)`;
-      if (idx === 0) opt.selected = true;
+      if (currentSection && (sec.name === currentSection || currentSection.includes(sec.name))) {
+        opt.selected = true;
+        matched = true;
+      } else if (!currentSection && idx === 0) {
+        opt.selected = true;
+        matched = true;
+      }
       secSelect.appendChild(opt);
     });
+
+    if (!matched && secSelect.options.length > 0) {
+      // Select the first valid section option
+      for (let i = 0; i < secSelect.options.length; i++) {
+        if (secSelect.options[i].value !== 'all') {
+          secSelect.selectedIndex = i;
+          break;
+        }
+      }
+    }
   }
 }
 
@@ -948,7 +979,7 @@ function applyFilterToSheet(asNewCourse = false) {
   const secSel = secSelect ? secSelect.value : 'all';
   const grpSel = grpSelect ? grpSelect.value : 'all';
 
-  const baseSec = first.section || (secSel !== 'all' ? secSel : 'Sec-1');
+  const baseSec = (secSel && secSel !== 'all') ? secSel : (first.section || 'Sec-1');
   let secDisplay = baseSec;
   if (grpSel && grpSel !== 'all' && !grpSel.toLowerCase().includes('all groups')) {
     const grpShort = (grpSel.includes('1') || grpSel.toLowerCase().includes('g1')) ? 'Group 1' :
