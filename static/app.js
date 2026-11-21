@@ -1,4 +1,4 @@
-// Exam Attendance Sheet App - Frontend Logic (English)
+// Exam Attendance Sheet App - Frontend Logic (Course-wise & Section-wise Auto-Sort)
 
 let appData = {
   settings: {
@@ -20,6 +20,12 @@ let appData = {
   previewPage: 0,
   zoom: 0.85
 };
+
+function naturalSort(arr) {
+  return arr.sort((a, b) => {
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  });
+}
 
 function showToast(message, isError = false) {
   const toast = document.getElementById('toast');
@@ -130,7 +136,14 @@ function setupEventListeners() {
     appData.settings.print_scope = e.target.value;
   });
 
+  // Course & Section Inputs
   document.getElementById('inputCourseName').addEventListener('input', () => {
+    saveFormToActiveCourse();
+    renderCourseTabs();
+    renderPreview();
+  });
+
+  document.getElementById('inputSection').addEventListener('input', () => {
     saveFormToActiveCourse();
     renderCourseTabs();
     renderPreview();
@@ -146,6 +159,16 @@ function setupEventListeners() {
     updateStudentStats();
     renderCourseTabs();
     renderPreview();
+  });
+
+  // Sort UIDs numerically button
+  document.getElementById('btnSortUids').addEventListener('click', () => {
+    const c = getActiveCourse();
+    if (!c || !c.students || c.students.length === 0) return;
+    c.students = naturalSort(c.students);
+    document.getElementById('inputUids').value = c.students.join('\n');
+    renderPreview();
+    showToast("Sorted student UIDs numerically");
   });
 
   document.getElementById('btnAddCourse').addEventListener('click', addNewCourse);
@@ -283,7 +306,11 @@ function renderCourseTabs() {
     const tab = document.createElement('button');
     tab.className = `course-tab-btn ${c.id === appData.activeCourseId ? 'active' : ''}`;
     const studentCount = (c.students || []).length;
-    tab.innerHTML = `<span>${c.course_name || 'Course'}</span> <span class="course-badge">${studentCount}</span>`;
+    
+    // Label with Section
+    const label = c.section ? `${c.course_name} (${c.section})` : (c.course_name || 'Course');
+    tab.innerHTML = `<span>${label}</span> <span class="course-badge">${studentCount}</span>`;
+    
     tab.addEventListener('click', () => {
       saveFormToActiveCourse();
       appData.activeCourseId = c.id;
@@ -296,7 +323,7 @@ function renderCourseTabs() {
 
     const opt = document.createElement('option');
     opt.value = c.id;
-    opt.innerText = `${c.course_name || 'Course'} (${studentCount} students)`;
+    opt.innerText = `${label} - ${studentCount} students`;
     opt.selected = (c.id === appData.activeCourseId);
     previewSelect.appendChild(opt);
   });
@@ -307,6 +334,7 @@ function loadCourseIntoForm(courseId) {
   if (!course) return;
 
   document.getElementById('inputCourseName').value = course.course_name || '';
+  document.getElementById('inputSection').value = course.section || '';
   document.getElementById('inputSemester').value = course.semester || '5';
   document.getElementById('inputUids').value = (course.students || []).join('\n');
 
@@ -363,6 +391,7 @@ function saveFormToActiveCourse() {
   if (!course) return;
 
   course.course_name = document.getElementById('inputCourseName').value.trim() || 'Course';
+  course.section = document.getElementById('inputSection').value.trim();
   course.semester = document.getElementById('inputSemester').value.trim() || '5';
 
   const rawUids = document.getElementById('inputUids').value;
@@ -386,7 +415,8 @@ function addNewCourse() {
   const newNum = appData.courses.length + 1;
   const newCourse = {
     id: `c_${Date.now()}`,
-    course_name: `Course-${newNum}`,
+    course_name: `CSE`,
+    section: `CT-${700 + newNum}`,
     semester: '5',
     dates: ["", "", "", "", "", "", "", ""],
     sub_codes: ["", "", "", "", "", "", "", ""],
@@ -401,7 +431,7 @@ function addNewCourse() {
   renderCourseTabs();
   loadCourseIntoForm(newCourse.id);
   renderPreview();
-  showToast(`Added new sheet: ${newCourse.course_name}`);
+  showToast(`Added new sheet: ${newCourse.course_name} (${newCourse.section})`);
 }
 
 function duplicateCurrentCourse() {
@@ -411,22 +441,23 @@ function duplicateCurrentCourse() {
 
   const clone = JSON.parse(JSON.stringify(current));
   clone.id = `c_${Date.now()}`;
-  clone.course_name = `${current.course_name} (Copy)`;
+  clone.section = current.section ? `${current.section}-Copy` : 'Copy';
   appData.courses.push(clone);
   appData.activeCourseId = clone.id;
   renderCourseTabs();
   loadCourseIntoForm(clone.id);
   renderPreview();
-  showToast(`Duplicated: ${clone.course_name}`);
+  showToast(`Duplicated: ${clone.course_name} (${clone.section})`);
 }
 
 function deleteCurrentCourse() {
   if (appData.courses.length <= 1) {
-    showToast("At least one course sheet is required!", true);
+    showToast("At least one sheet is required!", true);
     return;
   }
   const current = getActiveCourse();
-  if (!confirm(`Delete sheet for "${current.course_name}"?`)) return;
+  const label = current.section ? `${current.course_name} (${current.section})` : current.course_name;
+  if (!confirm(`Delete sheet for "${label}"?`)) return;
 
   appData.courses = appData.courses.filter(c => c.id !== current.id);
   appData.activeCourseId = appData.courses[0].id;
@@ -434,7 +465,7 @@ function deleteCurrentCourse() {
   renderCourseTabs();
   loadCourseIntoForm(appData.activeCourseId);
   renderPreview();
-  showToast("Course deleted");
+  showToast("Sheet deleted");
 }
 
 function addSampleStudents() {
@@ -509,7 +540,7 @@ async function handleLogoUpload(e) {
   }
 }
 
-// Handle Multiple Files Upload (Course-Wise)
+// Handle Multiple Files Upload with Course-Wise and Section-Wise Auto-Sorting
 async function handleMultiFileUpload(fileList) {
   if (!fileList || fileList.length === 0) return;
 
@@ -520,7 +551,7 @@ async function handleMultiFileUpload(fileList) {
   }
   formData.append('mode', mode);
 
-  showToast(`Processing ${fileList.length} file(s)...`);
+  showToast(`Processing ${fileList.length} file(s) course-wise & section-wise...`);
 
   try {
     const res = await fetch('/api/upload_multiple_files', {
@@ -551,9 +582,9 @@ async function handleMultiFileUpload(fileList) {
 
     const statusBadge = document.getElementById('uploadStatusBadge');
     statusBadge.style.display = 'block';
-    statusBadge.innerHTML = `✅ <b>${result.files_processed} file(s)</b> processed: <b>${result.total_courses} course sheet(s)</b> created (${result.total_students} students total)!`;
+    statusBadge.innerHTML = `✅ <b>${result.files_processed} file(s)</b> processed: <b>${result.total_courses} sheet(s)</b> auto-grouped by <b>Course</b> & sorted <b>Section-wise</b> (${result.total_students} students total)!`;
 
-    showToast(`Success: Created ${result.total_courses} course sheets from ${result.files_processed} files!`);
+    showToast(`Success: Created ${result.total_courses} course-section sheets from ${result.files_processed} files!`);
   } catch (err) {
     showToast("Error uploading files", true);
   }
@@ -571,12 +602,12 @@ async function loadLocalBifurcation() {
       } else {
         result.courses.forEach(c => appData.courses.push(c));
       }
-      appData.activeCourseId = appData.courses[0].id;
+      appData.activeCourseId = result.courses[0].id;
       appData.previewPage = 0;
       renderCourseTabs();
       loadCourseIntoForm(appData.activeCourseId);
       renderPreview();
-      showToast(`Loaded ${result.courses[0].course_name} (${result.courses[0].students.length} students)!`);
+      showToast(`Loaded ${result.courses[0].course_name} (${result.courses[0].section}) with ${result.courses[0].students.length} students!`);
     } else {
       showToast(result.error || "File not found", true);
     }
@@ -695,6 +726,12 @@ function generatePageHtml(course, pageIndex, totalPages) {
     `;
   }
 
+  // Build course + section display line
+  let courseDisplay = course.course_name || 'Course';
+  if (course.section && !courseDisplay.includes(course.section)) {
+    courseDisplay = `${courseDisplay} (Section: ${course.section})`;
+  }
+
   pageContainer.innerHTML = `
     <!-- Top Row: Logo & EX-12 Form Code -->
     <div class="sheet-top-row">
@@ -712,7 +749,7 @@ function generatePageHtml(course, pageIndex, totalPages) {
 
     <!-- Course / Block / Shift info strip -->
     <div class="sheet-info-strip">
-      <div>Course/Branch: <u>${course.course_name}</u></div>
+      <div>Course/Branch: <u>${courseDisplay}</u></div>
       <div>Centre/Block No: <u>${s.centre_block}</u></div>
       <div>Shift Time: <u>${s.shift_time}</u></div>
     </div>
@@ -781,7 +818,7 @@ async function downloadExcel() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Exam_Attendance_Sheets_${appData.settings.form_code}_${appData.courses.length}_Courses.xlsx`;
+    a.download = `Exam_Attendance_Sheets_${appData.settings.form_code}_${appData.courses.length}_Sheets_SectionWise.xlsx`;
     document.body.appendChild(a);
     a.click();
     a.remove();

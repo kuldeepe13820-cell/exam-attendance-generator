@@ -29,7 +29,8 @@ SAMPLE_DATA = {
     "courses": [
         {
             "id": "c_1",
-            "course_name": "CSE/IOT",
+            "course_name": "CSE",
+            "section": "CT-717",
             "semester": "5",
             "dates": ["", "", "", "", "", "", "", ""],
             "sub_codes": ["", "", "", "", "", "", "", ""],
@@ -40,26 +41,26 @@ SAMPLE_DATA = {
         },
         {
             "id": "c_2",
-            "course_name": "CSE/AI",
+            "course_name": "CSE",
+            "section": "CT-718",
+            "semester": "5",
+            "dates": ["", "", "", "", "", "", "", ""],
+            "sub_codes": ["", "", "", "", "", "", "", ""],
+            "students": [
+                "22BCS1009", "22BCS1010", "22BCS1011", "22BCS1012",
+                "22BCS1013", "22BCS1014", "22BCS1015", "22BCS1016"
+            ]
+        },
+        {
+            "id": "c_3",
+            "course_name": "CSE-AI",
+            "section": "CT-701",
             "semester": "5",
             "dates": ["", "", "", "", "", "", "", ""],
             "sub_codes": ["", "", "", "", "", "", "", ""],
             "students": [
                 "22AIM1001", "22AIM1002", "22AIM1003", "22AIM1004",
-                "22AIM1005", "22AIM1006", "22AIM1007", "22AIM1008",
-                "22AIM1009", "22AIM1010", "22AIM1011", "22AIM1012",
-                "22AIM1013", "22AIM1014", "22AIM1015", "22AIM1016"
-            ]
-        },
-        {
-            "id": "c_3",
-            "course_name": "ECE",
-            "semester": "4",
-            "dates": ["", "", "", "", "", "", "", ""],
-            "sub_codes": ["", "", "", "", "", "", "", ""],
-            "students": [
-                "22ECE2001", "22ECE2002", "22ECE2003", "22ECE2004",
-                "22ECE2005", "22ECE2006", "22ECE2007", "22ECE2008"
+                "22AIM1005", "22AIM1006", "22AIM1007", "22AIM1008"
             ]
         }
     ]
@@ -79,12 +80,9 @@ def load_local_bifurcation():
     if os.path.exists(target_file):
         with open(target_file, 'rb') as f:
             bytes_data = f.read()
-        courses = excel_generator.parse_uploaded_spreadsheet(bytes_data, target_file)
+        entries = excel_generator.parse_single_file(bytes_data, target_file)
+        courses = excel_generator.group_and_sort_student_entries(entries)
         if courses:
-            for i, c in enumerate(courses):
-                c['id'] = f"bifur_{i+1}"
-                c['dates'] = ["", "", "", "", "", "", "", ""]
-                c['sub_codes'] = ["", "", "", "", "", "", "", ""]
             return jsonify({
                 "success": True,
                 "filename": target_file,
@@ -95,7 +93,8 @@ def load_local_bifurcation():
 @app.route('/api/upload_multiple_files', methods=['POST'])
 def upload_multiple_files():
     """
-    Accepts multiple uploaded files (Excel / CSV) and parses each file into course sheets.
+    Accepts multiple uploaded Excel / CSV files.
+    Parses every file/sheet, groups students by Course, and sorts Section-wise and UID-wise!
     """
     files = request.files.getlist('files')
     if not files:
@@ -105,7 +104,7 @@ def upload_multiple_files():
         return jsonify({"success": False, "error": "No files uploaded."}), 400
 
     mode = request.form.get('mode', 'replace')  # 'replace' or 'append'
-    parsed_courses = []
+    all_entries = []
     file_summaries = []
 
     for f_idx, file in enumerate(files):
@@ -114,41 +113,36 @@ def upload_multiple_files():
         filename = secure_filename(file.filename)
         file_bytes = file.read()
         try:
-            courses = excel_generator.parse_uploaded_spreadsheet(file_bytes, filename)
-            for c_idx, c in enumerate(courses):
-                c['id'] = f"course_{f_idx+1}_{c_idx+1}_{os.urandom(3).hex()}"
-                if not c.get('dates') or len(c['dates']) < 8:
-                    c['dates'] = ["", "", "", "", "", "", "", ""]
-                if not c.get('sub_codes') or len(c['sub_codes']) < 8:
-                    c['sub_codes'] = ["", "", "", "", "", "", "", ""]
-                parsed_courses.append(c)
-                file_summaries.append({
-                    "filename": filename,
-                    "course_name": c['course_name'],
-                    "students_count": len(c['students'])
-                })
+            entries = excel_generator.parse_single_file(file_bytes, filename)
+            all_entries.extend(entries)
+            file_summaries.append({
+                "filename": filename,
+                "entries_found": len(entries)
+            })
         except Exception as err:
             print(f"Error parsing {filename}: {err}")
 
-    if not parsed_courses:
+    if not all_entries:
         return jsonify({
             "success": False,
-            "error": "No student UIDs found in uploaded files. Please ensure files contain UID or Roll No column."
+            "error": "No student UIDs found in uploaded files. Please check file format."
         }), 400
+
+    # Auto group by Course and automatically sort Section-wise and UID-wise!
+    sorted_courses = excel_generator.group_and_sort_student_entries(all_entries)
 
     return jsonify({
         "success": True,
         "mode": mode,
-        "files_processed": len(files),
-        "total_courses": len(parsed_courses),
-        "total_students": sum(len(c['students']) for c in parsed_courses),
-        "courses": parsed_courses,
+        "files_processed": len(file_summaries),
+        "total_courses": len(sorted_courses),
+        "total_students": sum(len(c['students']) for c in sorted_courses),
+        "courses": sorted_courses,
         "file_summaries": file_summaries
     })
 
 @app.route('/api/upload_file', methods=['POST'])
 def upload_file():
-    # Reuse multiple files endpoint logic
     return upload_multiple_files()
 
 @app.route('/api/upload_logo', methods=['POST'])
@@ -181,7 +175,7 @@ def generate_excel():
         
         form = data.get('settings', {}).get('form_code', 'EX-12')
         courses_count = len(data.get('courses', []))
-        download_name = f"Exam_Attendance_Sheets_{form}_{courses_count}_Courses.xlsx"
+        download_name = f"Exam_Attendance_Sheets_{form}_{courses_count}_Courses_SectionWise.xlsx"
 
         return send_file(
             excel_stream,

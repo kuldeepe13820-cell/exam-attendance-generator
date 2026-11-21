@@ -13,6 +13,10 @@ medium_side = Side(border_style='medium', color='000000')
 
 table_border = Border(top=thin_side, left=thin_side, right=thin_side, bottom=thin_side)
 
+def natural_sort_key(s):
+    """Sort strings with numbers naturally (e.g. CT-2 before CT-10, 24BCS1001 before 24BCS1002)."""
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s or ''))]
+
 def apply_range_style(ws, cell_range, border=None, font=None, alignment=None, fill=None):
     """Apply styling across a merged or contiguous range of cells."""
     for row in ws[cell_range]:
@@ -35,7 +39,7 @@ def sanitize_sheet_title(title, existing_titles):
     base = clean
     counter = 1
     while clean.lower() in [t.lower() for t in existing_titles]:
-        clean = f"{base[:25]}_{counter}"
+        clean = f"{base[:24]}_{counter}"
         counter += 1
     return clean
 
@@ -89,7 +93,14 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
     handwritten_mode = global_settings.get('handwritten_mode', True)
 
     course_name = course_data.get('course_name', 'CSE/IOT').strip()
+    section = course_data.get('section', '').strip()
     semester = str(course_data.get('semester', '5')).strip()
+
+    # Build Header Course line with Section if available
+    if section and section.lower() not in course_name.lower():
+        course_display = f"{course_name} (Section: {section})"
+    else:
+        course_display = course_name
     
     # 8 exam columns
     dates = course_data.get('dates', [])
@@ -117,7 +128,7 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
         cell_ex.font = Font(name='Arial', size=10, bold=True)
         cell_ex.alignment = Alignment(horizontal='right', vertical='center')
 
-        # Add Logo on top left if enabled (scale nicely for Chandigarh University rectangular emblem)
+        # Add Logo on top left if enabled
         if show_logo and logo_path and os.path.exists(logo_path):
             try:
                 xl_img = XLImage(logo_path)
@@ -148,7 +159,7 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
         ws.row_dimensions[R_info].height = 14
         
         ws.merge_cells(f'A{R_info}:C{R_info}')
-        c_branch = ws.cell(R_info, 1, f"Course/Branch: {course_name}")
+        c_branch = ws.cell(R_info, 1, f"Course/Branch: {course_display}")
         c_branch.font = Font(name='Arial', size=9.0, bold=True)
         c_branch.alignment = Alignment(horizontal='left', vertical='center')
 
@@ -286,6 +297,9 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
     return ws
 
 def generate_attendance_workbook(data):
+    """
+    Generates a full openpyxl Workbook with multiple sheets course-wise and section-wise.
+    """
     wb = openpyxl.Workbook()
     default_ws = wb.active
     
@@ -296,6 +310,7 @@ def generate_attendance_workbook(data):
     if not courses:
         courses = [{
             "course_name": "Course-1",
+            "section": "Sec-1",
             "semester": "1",
             "dates": [],
             "sub_codes": [],
@@ -307,7 +322,15 @@ def generate_attendance_workbook(data):
 
     for course_data in courses:
         raw_name = course_data.get('course_name', 'Course')
-        sheet_title = sanitize_sheet_title(raw_name, existing_titles)
+        section = course_data.get('section', '')
+        
+        # Build concise tab name (e.g. CSE_CT-717 or CS201_CT-717)
+        if section and section.lower() not in raw_name.lower():
+            tab_base = f"{raw_name}_{section}"
+        else:
+            tab_base = raw_name
+
+        sheet_title = sanitize_sheet_title(tab_base, existing_titles)
         existing_titles.append(sheet_title)
 
         if first_sheet:
@@ -329,34 +352,68 @@ def clean_name_from_filename(filename):
     base = os.path.splitext(filename)[0]
     base = re.sub(r'(_Bifurcation_Sheet|_Attendance_Sheet|_Student_List|_List)', '', base, flags=re.IGNORECASE)
     base = base.replace('__', '_').strip('_ ')
-    return base[:25] if base else "Course"
+    return base if base else "Course"
 
-def parse_uploaded_spreadsheet(file_bytes, filename):
-    courses_found = []
+def parse_single_file(file_bytes, filename):
+    """
+    Parses an individual file into raw student entries with course, section, sem, sub_code.
+    Returns list of dicts:
+    [{ 'course': 'CSE', 'section': 'CT-717', 'semester': '5', 'sub_code': '24CSP-304', 'uid': '24BCS10212' }, ...]
+    """
+    entries = []
     filename_lower = filename.lower()
-    fallback_name = clean_name_from_filename(filename)
+    fn_clean = clean_name_from_filename(filename)
+
+    # Guess section from filename if present (e.g. CT-717, Sec-A, etc.)
+    fn_sec_match = re.search(r'(CT[-_]?\d+|Sec(?:tion)?[-_]?[A-Za-z0-9]+)', fn_clean, re.IGNORECASE)
+    fn_section = fn_sec_match.group(1).replace('_', '-').strip() if fn_sec_match else ''
+
+    # Guess course from filename
+    fn_course = "CSE" if any(k in fn_clean.upper() for k in ['BCS', 'CSE', 'CS201']) else \
+                "CSE-AI" if 'AIM' in fn_clean.upper() else \
+                "ECE" if 'ECE' in fn_clean.upper() else \
+                "BCA" if 'BCA' in fn_clean.upper() else \
+                "MCA" if 'MCA' in fn_clean.upper() else \
+                fn_clean
 
     if filename_lower.endswith('.csv'):
         import csv
         content = file_bytes.decode('utf-8', errors='ignore')
-        reader = csv.reader(content.splitlines())
-        uids = []
-        for row in reader:
-            for cell in row:
-                c = cell.strip()
-                if re.match(r'^[0-9]{2}[A-Za-z]{2,5}[0-9]{3,6}$', c) or (len(c) >= 5 and c.isalnum() and any(ch.isdigit() for ch in c)):
-                    uids.append(c)
+        reader = list(csv.reader(content.splitlines()))
         
-        if uids:
-            # Preserve order and deduplicate
-            seen = set()
-            clean_uids = [x for x in uids if not (x in seen or seen.add(x))]
-            courses_found.append({
-                "course_name": fallback_name,
-                "semester": "5",
-                "dates": ["", "", "", "", "", "", "", ""],
-                "sub_codes": ["", "", "", "", "", "", "", ""],
-                "students": clean_uids
+        # Check header
+        uid_col = 0
+        course_col = None
+        sec_col = None
+        start_row = 0
+
+        for r_idx, row in enumerate(reader[:10]):
+            upper_row = [str(c).strip().upper() for c in row]
+            for c_idx, cell in enumerate(upper_row):
+                if cell in ['UID', 'UID NO', 'ROLL NO', 'STUDENT ID']:
+                    uid_col = c_idx
+                    start_row = r_idx + 1
+                if cell in ['COURSE', 'BRANCH', 'PROGRAM']:
+                    course_col = c_idx
+                if cell in ['SECTION', 'SEC', 'GROUP', 'GRP']:
+                    sec_col = c_idx
+
+        for row in reader[start_row:]:
+            if len(row) <= uid_col:
+                continue
+            uid = str(row[uid_col]).strip()
+            if not uid or uid.lower() in ['uid', 'roll no', 'total']:
+                continue
+            
+            c_name = str(row[course_col]).strip() if course_col is not None and len(row) > course_col else fn_course
+            s_name = str(row[sec_col]).strip() if sec_col is not None and len(row) > sec_col else fn_section
+
+            entries.append({
+                'course': c_name or fn_course,
+                'section': s_name or fn_section or 'Sec-1',
+                'semester': '5',
+                'sub_code': '',
+                'uid': uid
             })
 
     elif filename_lower.endswith(('.xlsx', '.xlsm', '.xls')):
@@ -365,11 +422,11 @@ def parse_uploaded_spreadsheet(file_bytes, filename):
         for sheetname in wb.sheetnames:
             ws = wb[sheetname]
             course_name = ""
+            section_name = ""
             semester = "5"
-            uids = []
             sub_code = ""
 
-            # 1. Check Row 1 for Bifurcation Header details
+            # Check Row 1 for Bifurcation Header details
             r1_val = str(ws.cell(1, 1).value or '')
             if 'Bifurcation' in r1_val or 'Internal Marks' in r1_val or 'Section:' in r1_val:
                 parts = [p.strip() for p in r1_val.split('|')]
@@ -377,7 +434,7 @@ def parse_uploaded_spreadsheet(file_bytes, filename):
                     if 'Sem:' in p:
                         semester = p.replace('Sem:', '').strip()
                     if 'Section:' in p:
-                        course_name = p.replace('Section:', '').strip()
+                        section_name = p.replace('Section:', '').strip()
                     elif 'Program:' in p and not course_name:
                         course_name = p.replace('Program:', '').strip()
                     if '(' in p and ')' in p:
@@ -385,61 +442,126 @@ def parse_uploaded_spreadsheet(file_bytes, filename):
                         if match:
                             sub_code = match.group(1).strip()
 
-            # 2. If course_name not extracted from Row 1, check sheetname or filename
-            if not course_name:
-                sheet_lower = sheetname.strip().lower()
-                if sheet_lower not in ['sheet1', 'sheet 1', 'bifurcation sheet', 'bifurcation']:
-                    course_name = sheetname.strip()
+            # If section not found in header, check sheetname or filename
+            if not section_name:
+                sheet_sec_match = re.search(r'(CT[-_]?\d+|Sec(?:tion)?[-_]?[A-Za-z0-9]+)', sheetname, re.IGNORECASE)
+                if sheet_sec_match:
+                    section_name = sheet_sec_match.group(1).replace('_', '-').strip()
                 else:
-                    course_name = fallback_name
+                    section_name = fn_section or (sheetname if sheetname.lower() not in ['sheet1', 'sheet 1', 'bifurcation sheet'] else 'Sec-1')
 
-            # 3. Locate UID column
+            if not course_name:
+                course_name = fn_course
+
+            # Check table headers for row-level section or course columns
             uid_col = 2  # default Col B
+            sec_col = None
+            course_col = None
             header_row = 1
-            found_header = False
+
             for r in range(1, min(10, ws.max_row + 1)):
                 for c in range(1, min(15, ws.max_column + 1)):
                     val = str(ws.cell(r, c).value or '').strip().upper()
                     if val in ['UID', 'UID NO', 'UID NO.', 'ROLL NO', 'ROLL NO.', 'STUDENT ID', 'REG NO']:
                         uid_col = c
                         header_row = r
-                        found_header = True
-                        break
-                if found_header:
-                    break
+                    if val in ['SECTION', 'SEC', 'GROUP', 'CLASS']:
+                        sec_col = c
+                    if val in ['COURSE', 'BRANCH', 'PROGRAM']:
+                        course_col = c
 
-            # 4. Extract UIDs
+            # Extract UIDs
             for r in range(header_row + 1, ws.max_row + 1):
                 val = ws.cell(r, uid_col).value
                 if val is not None:
                     s_val = str(val).strip()
                     if s_val and s_val.lower() not in ['uid', 'roll no', 'total', 'average', 'none', 's.no.', 's.no']:
-                        uids.append(s_val)
+                        # Row-level override if columns exist
+                        row_sec = str(ws.cell(r, sec_col).value or '').strip() if sec_col else section_name
+                        row_course = str(ws.cell(r, course_col).value or '').strip() if course_col else course_name
 
-            # If still empty, scan columns for student ID patterns
-            if not uids:
-                for c in range(1, min(5, ws.max_column + 1)):
-                    col_uids = []
-                    for r in range(1, ws.max_row + 1):
-                        cell_v = str(ws.cell(r, c).value or '').strip()
-                        if re.match(r'^[0-9]{2}[A-Za-z]{2,5}[0-9]{3,6}$', cell_v):
-                            col_uids.append(cell_v)
-                    if len(col_uids) > len(uids):
-                        uids = col_uids
+                        entries.append({
+                            'course': row_course or course_name,
+                            'section': row_sec or section_name or 'Sec-1',
+                            'semester': semester,
+                            'sub_code': sub_code,
+                            'uid': s_val
+                        })
 
-            seen = set()
-            clean_uids = [x for x in uids if not (x in seen or seen.add(x))]
+    return entries
 
-            if clean_uids:
-                sub_codes = [sub_code] if sub_code else [""]
-                while len(sub_codes) < 8:
-                    sub_codes.append("")
-                courses_found.append({
-                    "course_name": course_name[:25],
-                    "semester": semester,
-                    "dates": ["", "", "", "", "", "", "", ""],
-                    "sub_codes": sub_codes,
-                    "students": clean_uids
-                })
+def group_and_sort_student_entries(entries):
+    """
+    Takes all raw student entries from multiple files/sheets.
+    Groups them by (Course, Section).
+    Sorts Course-wise (alphabetical/natural), Section-wise (natural), and Student UID-wise (natural).
+    Returns list of ready Course Sheet objects.
+    """
+    if not entries:
+        return []
 
-    return courses_found
+    # Group by (course, section)
+    grouped = {}
+    for item in entries:
+        c_raw = (item['course'] or 'Course').strip()
+        s_raw = (item['section'] or 'Sec-1').strip()
+        
+        # Clean up course name if it's CS201 / program code
+        if 'CS201' in c_raw:
+            course = "CSE"
+        elif 'CS202' in c_raw:
+            course = "CSE-AI"
+        elif any(k in c_raw.upper() for k in ['BCS', 'CSE']):
+            course = "CSE"
+        elif 'AIM' in c_raw.upper():
+            course = "CSE-AI"
+        elif 'ECE' in c_raw.upper():
+            course = "ECE"
+        else:
+            course = c_raw
+
+        section = s_raw
+        key = (course, section)
+        
+        if key not in grouped:
+            grouped[key] = {
+                'course_name': course,
+                'section': section,
+                'semester': item.get('semester', '5'),
+                'sub_codes': [item.get('sub_code', '')] if item.get('sub_code') else [],
+                'students_set': set(),
+                'students': []
+            }
+        
+        uid = str(item['uid']).strip()
+        if uid and uid not in grouped[key]['students_set']:
+            grouped[key]['students_set'].add(uid)
+            grouped[key]['students'].append(uid)
+
+    # Convert to list
+    course_list = list(grouped.values())
+
+    # 1. Sort Courses naturally, then Sections naturally!
+    course_list.sort(key=lambda x: (
+        natural_sort_key(x['course_name']),
+        natural_sort_key(x['section'])
+    ))
+
+    # 2. Sort UIDs naturally within each section!
+    for idx, c in enumerate(course_list):
+        c['students'].sort(key=natural_sort_key)
+        del c['students_set']  # cleanup set
+        c['id'] = f"course_sec_{idx+1}_{os.urandom(2).hex()}"
+        
+        # Ensure 8 dates & sub codes blank for handwriting
+        if len(c['sub_codes']) < 8:
+            c['sub_codes'] = c['sub_codes'] + [''] * (8 - len(c['sub_codes']))
+        c['sub_codes'] = c['sub_codes'][:8]
+        c['dates'] = ['', '', '', '', '', '', '', '']
+
+    return course_list
+
+def parse_uploaded_spreadsheet(file_bytes, filename):
+    """Parses a single file and returns course-wise and section-wise sorted sheets."""
+    entries = parse_single_file(file_bytes, filename)
+    return group_and_sort_student_entries(entries)

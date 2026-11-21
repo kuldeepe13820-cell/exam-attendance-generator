@@ -15,7 +15,7 @@
       <img src="/static/default_logo.png" alt="Chandigarh University Logo" class="brand-logo-img" id="headerLogoImg" style="width: auto; height: 38px; border-radius: 4px; background: white; padding: 2px;">
       <div>
         <h1>Exam Attendance Sheet Generator</h1>
-        <div class="brand-subtitle">Form EX-12 &bull; Multi-Course Sheets &bull; A4 Landscape &bull; Signature Ready</div>
+        <div class="brand-subtitle">Form EX-12 &bull; Multi-Course &bull; Section-Wise Auto-Sort &bull; A4 Landscape</div>
       </div>
     </div>
     <div class="header-actions">
@@ -39,34 +39,34 @@
       
       <!-- Multiple File Upload Section -->
       <div class="section-box" style="background: #f0fdf4; border-color: #bbf7d0;">
-        <div class="section-title" style="color: #166534; margin-bottom: 6px;">
-          <span>📁 Multi-File Upload (Course-Wise Sheets)</span>
+        <div class="section-title" style="color: #166534; margin-bottom: 4px;">
+          <span>📁 Multi-File Batch Upload</span>
         </div>
-        <p style="font-size: 0.78rem; color: #15803d; margin-bottom: 8px;">
-          Upload one or multiple Excel / CSV bifurcation sheets to auto-generate course sheets:
+        <p style="font-size: 0.76rem; color: #15803d; margin-bottom: 8px;">
+          Upload multiple Excel files in one go. Automatically groups by <b>Course</b> and sorts <b>Section-wise</b> + <b>UID-wise</b>:
         </p>
         
         <!-- Drag and Drop Zone -->
         <div id="dropZone" style="border: 2px dashed #86efac; border-radius: 8px; padding: 14px; text-align: center; background: white; cursor: pointer; transition: all 0.2s;">
-          <div style="font-size: 1.4rem; margin-bottom: 4px;">📂</div>
-          <div style="font-weight: 700; font-size: 0.85rem; color: #166534;">Click or Drop Multiple Files Here</div>
-          <div style="font-size: 0.72rem; color: #65a30d; margin-top: 2px;">(Select 1, 5, 10+ Excel / CSV files at once)</div>
+          <div style="font-size: 1.5rem; margin-bottom: 2px;">📂</div>
+          <div style="font-weight: 700; font-size: 0.85rem; color: #166534;">Drop Multiple Excel Files Here</div>
+          <div style="font-size: 0.72rem; color: #4ade80; margin-top: 2px;">(Select 1 to 20+ Excel / CSV files together)</div>
           <input type="file" id="multiFileInput" multiple accept=".xlsx,.xls,.csv" style="display: none;">
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.75rem;">
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #166534;">
-            <input type="radio" name="uploadMode" value="replace" checked> Replace Existing
+            <input type="radio" name="uploadMode" value="replace" checked> Replace All
           </label>
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #166534;">
-            <input type="radio" name="uploadMode" value="append"> Add to Existing
+            <input type="radio" name="uploadMode" value="append"> Append
           </label>
           <button class="btn btn-secondary btn-sm" id="btnLoadLocalBifurcation" style="padding: 2px 6px; font-size: 0.72rem;">
             ⚡ Local File
           </button>
         </div>
 
-        <div id="uploadStatusBadge" style="display: none; margin-top: 8px; font-size: 0.76rem; background: #dcfce7; color: #14532d; padding: 4px 8px; border-radius: 4px; font-weight: 600;"></div>
+        <div id="uploadStatusBadge" style="display: none; margin-top: 8px; font-size: 0.76rem; background: #dcfce7; color: #14532d; padding: 6px 10px; border-radius: 6px; font-weight: 600; line-height: 1.3;"></div>
       </div>
 
       <!-- Institute & Examination Details -->
@@ -126,11 +126,11 @@
         </div>
       </div>
 
-      <!-- Course Sheets Management -->
+      <!-- Course & Section Sheets Management -->
       <div class="section-box">
         <div class="section-title">
-          <span>📚 Course Sheets (Multi-Sheet Tabs)</span>
-          <button class="btn btn-primary btn-sm" id="btnAddCourse">+ Add Course</button>
+          <span>📚 Course &amp; Section Sheets</span>
+          <button class="btn btn-primary btn-sm" id="btnAddCourse">+ Add Sheet</button>
         </div>
         
         <!-- Course Tabs in sidebar -->
@@ -140,10 +140,14 @@
 
         <!-- Active Course Settings -->
         <div id="activeCourseSettings">
-          <div class="grid-2">
+          <div class="grid-3">
             <div class="form-group">
               <label for="inputCourseName">Course / Branch</label>
-              <input type="text" id="inputCourseName" class="form-control" placeholder="e.g. CSE/IOT">
+              <input type="text" id="inputCourseName" class="form-control" placeholder="e.g. CSE">
+            </div>
+            <div class="form-group">
+              <label for="inputSection">Section</label>
+              <input type="text" id="inputSection" class="form-control" placeholder="e.g. CT-717">
             </div>
             <div class="form-group">
               <label for="inputSemester">Semester</label>
@@ -191,9 +195,14 @@
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <label for="inputUids" style="margin: 0;">Student UIDs (Roll Numbers)</label>
-              <span id="studentStatsBadge" style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a;">
-                8 Students (1 Page)
-              </span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button class="btn btn-secondary btn-sm" id="btnSortUids" style="font-size: 0.70rem; padding: 1px 5px;" title="Sort UIDs in ascending order">
+                  🔢 Sort UIDs
+                </button>
+                <span id="studentStatsBadge" style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a;">
+                  8 Students (1 Page)
+                </span>
+              </div>
             </div>
             <textarea id="inputUids" class="form-control" rows="6" placeholder="Paste UIDs here (one per line or comma/tab separated)&#10;e.g.&#10;22BCS1001&#10;22BCS1002&#10;22BCS1003"></textarea>
             <div style="display: flex; justify-content: space-between; margin-top: 6px;">
@@ -205,10 +214,10 @@
           <!-- Course Operations -->
           <div style="display: flex; gap: 8px; margin-top: 12px; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
             <button class="btn btn-secondary btn-sm" id="btnDuplicateCourse" style="flex: 1;">
-              📋 Duplicate Course
+              📋 Duplicate Sheet
             </button>
             <button class="btn btn-danger btn-sm" id="btnDeleteCourse" style="flex: 1;">
-              🗑️ Delete Course
+              🗑️ Delete Sheet
             </button>
           </div>
 
@@ -232,8 +241,8 @@
           <div class="form-group">
             <label for="selectPrintScope">Print Scope</label>
             <select id="selectPrintScope" class="form-control">
-              <option value="all" selected>All Courses (Complete Workbook)</option>
-              <option value="current">Current Course Only</option>
+              <option value="all" selected>All Sheets (Complete Workbook)</option>
+              <option value="current">Current Sheet Only</option>
             </select>
           </div>
         </div>
