@@ -69,6 +69,69 @@
         <div id="uploadStatusBadge" style="display: none; margin-top: 8px; font-size: 0.76rem; background: #dcfce7; color: #14532d; padding: 6px 10px; border-radius: 6px; font-weight: 600; line-height: 1.3;"></div>
       </div>
 
+      <!-- Auto-Fetch & Selector: Subject, Section & Group -->
+      <div class="section-box" id="autoFilterBox" style="background: #eff6ff; border: 1.5px solid #60a5fa; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);">
+        <div class="section-title" style="color: #1d4ed8; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 1.1rem;">🎯</span> 
+            <b>Auto-Fetch: Subject &amp; Section Selector</b>
+          </span>
+          <span id="filterStatsBadge" class="course-badge" style="background: #2563eb; color: white;">0 Students</span>
+        </div>
+        <p style="font-size: 0.74rem; color: #1e40af; margin-bottom: 8px;">
+          Automatically fetched from Excel. Simply choose your Subject, Section, and Group:
+        </p>
+
+        <!-- 1. Subject Dropdown -->
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="filterSubjectSelect" style="font-size: 0.76rem; font-weight: 700; color: #1e3a8a;">
+            📚 1. Select Subject / Paper:
+          </label>
+          <select id="filterSubjectSelect" class="form-control" style="font-size: 0.82rem; font-weight: 600; border-color: #93c5fd;">
+            <option value="all">All Subjects (Upload Excel to Load)</option>
+          </select>
+        </div>
+
+        <!-- 2. Section & 3. Group Dropdowns in a 2-Column Grid -->
+        <div class="grid-2" style="margin-bottom: 8px; gap: 8px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="filterSectionSelect" style="font-size: 0.76rem; font-weight: 700; color: #1e3a8a;">
+              🏷️ 2. Select Section:
+            </label>
+            <select id="filterSectionSelect" class="form-control" style="font-size: 0.82rem; font-weight: 600; border-color: #93c5fd;">
+              <option value="all">All Sections</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="filterGroupSelect" style="font-size: 0.76rem; font-weight: 700; color: #1e3a8a;">
+              👥 3. Select Group:
+            </label>
+            <select id="filterGroupSelect" class="form-control" style="font-size: 0.82rem; font-weight: 600; border-color: #93c5fd;">
+              <option value="all">All Groups (Whole Section)</option>
+              <option value="Group 1">Group 1 (Batch 1)</option>
+              <option value="Group 2">Group 2 (Batch 2)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Live Status Pill & Student Count -->
+        <div id="filterResultBanner" style="background: white; border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; font-size: 0.76rem; color: #1e40af; display: flex; justify-content: space-between; align-items: center;">
+          <span id="filterSummaryText">Ready to auto-fetch from Excel</span>
+          <span id="filterCountBadge" style="font-weight: 800; color: #1d4ed8; background: #dbeafe; padding: 2px 8px; border-radius: 12px;">0 Students</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-primary btn-sm" id="btnApplySelection" style="flex: 2; justify-content: center; font-weight: 700; font-size: 0.8rem; background: #2563eb; padding: 7px 10px;">
+            ⚡ Generate Sheet for Selected
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btnGenerateAllTabs" style="flex: 1; justify-content: center; font-size: 0.75rem;" title="Generate separate tabs for each section">
+            📑 All Tabs
+          </button>
+        </div>
+      </div>
+
       <!-- Institute & Examination Details -->
       <div class="section-box">
         <div class="section-title">

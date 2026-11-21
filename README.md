@@ -7,7 +7,12 @@ A lightweight, automated web application tailored for universities and academic 
 
 ## 🌟 Key Features
 
-1. **One-Click Switch: 7 UIDs vs 8 UIDs per Sheet**:
+1. **Auto-Fetch: Subject, Section & Group Selector**:
+   - Upload any Excel / Bifurcation sheet; the software automatically fetches all available **Subjects**, **Sections**, and **Groups**.
+   - Simply select the Subject, Section, and Group (e.g. `All Groups`, `Group 1`, or `Group 2`) from 3 interactive dropdowns to instantly generate the filtered attendance sheet!
+   - Supports 1-click **"Generate Sheet for Selected"** or **"Generate All Sections as Tabs"**.
+
+2. **One-Click Switch: 7 UIDs vs 8 UIDs per Sheet**:
    - Easily switch between **7 UIDs / Sheet** and **8 UIDs / Sheet** with a single click right on the toolbar or sidebar.
    - Both formats feature **strictly equal box widths** across all 8 exam columns and dynamic row height budgeting for a 100% clean A4 Landscape 1-page fit.
    - Generates multi-course Excel `.xlsx` workbooks with independent pagination and repeating headers.

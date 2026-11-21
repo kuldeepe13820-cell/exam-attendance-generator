@@ -337,6 +337,21 @@ body {
   align-items: center;
 }
 
+/* Auto Filter Box Animations & Selectors */
+#autoFilterBox {
+  transition: all 0.25s ease-in-out;
+}
+
+#autoFilterBox select {
+  background: white;
+  transition: border-color 0.15s ease;
+}
+
+#autoFilterBox select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
 /* UID Capacity Segmented Toggle Buttons (1-Click Switcher) */
 .uid-toggle-container {
   display: inline-flex;

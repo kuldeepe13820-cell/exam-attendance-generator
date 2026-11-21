@@ -341,9 +341,14 @@ def generate_attendance_workbook(data):
         raw_name = course_data.get('course_name', 'Course')
         section = course_data.get('section', '')
         
-        # Build concise tab name (e.g. CSE_CT-717)
-        if section and section.lower() not in raw_name.lower():
-            tab_base = f"{raw_name}_{section}"
+        # Build concise tab name (e.g. CSE_CT-717 (G1) or CT-717)
+        if section:
+            sec_clean = re.sub(r'24BCS_WD_', '', section).strip()
+            course_short = raw_name.split('-')[0].strip()
+            if course_short.lower() not in sec_clean.lower():
+                tab_base = f"{course_short}_{sec_clean}"
+            else:
+                tab_base = sec_clean
         else:
             tab_base = raw_name
 
@@ -373,19 +378,31 @@ def clean_name_from_filename(filename):
 
 def parse_single_file(file_bytes, filename):
     """
-    Parses an individual file into raw student entries with course, section, sem, sub_code.
-    Returns list of dicts:
-    [{ 'course': 'CSE', 'section': 'CT-717', 'semester': '5', 'sub_code': '24CSP-304', 'uid': '24BCS10212' }, ...]
+    Parses an individual Excel or CSV file into rich student entries with:
+    - Subject Name & Subject Code
+    - Course / Program
+    - Section
+    - Group (e.g. Group 1, Group 2, G1, G2, etc.)
+    - Semester
+    - Student UID and Name
     """
     entries = []
     filename_lower = filename.lower()
     fn_clean = clean_name_from_filename(filename)
 
-    # Guess section from filename if present (e.g. CT-717, Sec-A, etc.)
+    # 1. Guess section from filename if present (e.g. CT-717, Sec-A, etc.)
     fn_sec_match = re.search(r'(CT[-_]?\d+|Sec(?:tion)?[-_]?[A-Za-z0-9]+)', fn_clean, re.IGNORECASE)
     fn_section = fn_sec_match.group(1).replace('_', '-').strip() if fn_sec_match else ''
 
-    # Guess course from filename
+    # 2. Guess subject code from filename (e.g. 24CSP-304, 22CST-201)
+    fn_code_match = re.search(r'([A-Za-z0-9]{2,5}[-_][A-Za-z0-9]{2,5})', fn_clean)
+    fn_sub_code = fn_code_match.group(1).strip() if fn_code_match else ''
+
+    # 3. Guess group from filename if present (e.g. Group-1, Grp1, G1, G2)
+    fn_grp_match = re.search(r'\b(Group[-_ ]?[A-Za-z0-9]+|Grp[-_ ]?[A-Za-z0-9]+|G[12])\b', fn_clean, re.IGNORECASE)
+    fn_group = fn_grp_match.group(1).strip() if fn_grp_match else ''
+
+    # 4. Guess course from filename
     fn_course = "CSE" if any(k in fn_clean.upper() for k in ['BCS', 'CSE', 'CS201']) else \
                 "CSE-AI" if 'AIM' in fn_clean.upper() else \
                 "ECE" if 'ECE' in fn_clean.upper() else \
@@ -399,37 +416,55 @@ def parse_single_file(file_bytes, filename):
         reader = list(csv.reader(content.splitlines()))
         
         uid_col = 0
+        name_col = None
+        group_col = None
         course_col = None
         sec_col = None
+        subj_col = None
         start_row = 0
 
         for r_idx, row in enumerate(reader[:10]):
             upper_row = [str(c).strip().upper() for c in row]
             for c_idx, cell in enumerate(upper_row):
-                if cell in ['UID', 'UID NO', 'ROLL NO', 'STUDENT ID']:
+                if cell in ['UID', 'UID NO', 'UID NO.', 'ROLL NO', 'ROLL NO.', 'STUDENT ID']:
                     uid_col = c_idx
                     start_row = r_idx + 1
-                if cell in ['COURSE', 'BRANCH', 'PROGRAM']:
-                    course_col = c_idx
-                if cell in ['SECTION', 'SEC', 'GROUP', 'GRP']:
+                elif cell in ['NAME', 'STUDENT NAME']:
+                    name_col = c_idx
+                elif cell in ['GROUP', 'GRP', 'BATCH']:
+                    group_col = c_idx
+                elif cell in ['SECTION', 'SEC', 'CLASS']:
                     sec_col = c_idx
+                elif cell in ['COURSE', 'BRANCH', 'PROGRAM']:
+                    course_col = c_idx
+                elif cell in ['SUBJECT', 'PAPER', 'SUB CODE', 'SUBJECT NAME']:
+                    subj_col = c_idx
 
         for row in reader[start_row:]:
             if len(row) <= uid_col:
                 continue
             uid = str(row[uid_col]).strip()
-            if not uid or uid.lower() in ['uid', 'roll no', 'total']:
+            if not uid or uid.lower() in ['uid', 'roll no', 'total', 'average', 'none']:
                 continue
             
             c_name = str(row[course_col]).strip() if course_col is not None and len(row) > course_col else fn_course
             s_name = str(row[sec_col]).strip() if sec_col is not None and len(row) > sec_col else fn_section
+            g_name = str(row[group_col]).strip() if group_col is not None and len(row) > group_col else fn_group
+            sub_name = str(row[subj_col]).strip() if subj_col is not None and len(row) > subj_col else ''
+            s_name_student = str(row[name_col]).strip() if name_col is not None and len(row) > name_col else ''
+
+            subj_disp = sub_name or fn_sub_code or c_name or "General"
 
             entries.append({
                 'course': c_name or fn_course,
                 'section': s_name or fn_section or 'Sec-1',
                 'semester': '5',
-                'sub_code': '',
-                'uid': uid
+                'subject_title': sub_name or fn_sub_code or '',
+                'sub_code': fn_sub_code,
+                'subject': subj_disp,
+                'group': g_name,
+                'uid': uid,
+                'name': s_name_student
             })
 
     elif filename_lower.endswith(('.xlsx', '.xlsm', '.xls')):
@@ -440,70 +475,258 @@ def parse_single_file(file_bytes, filename):
             course_name = ""
             section_name = ""
             semester = "5"
-            sub_code = ""
+            subject_title = ""
+            sub_code = fn_sub_code
+            sheet_group = fn_group
 
-            # Check Row 1 for Bifurcation Header details
-            r1_val = str(ws.cell(1, 1).value or '')
-            if 'Bifurcation' in r1_val or 'Internal Marks' in r1_val or 'Section:' in r1_val:
-                parts = [p.strip() for p in r1_val.split('|')]
-                for p in parts:
-                    if 'Sem:' in p:
-                        semester = p.replace('Sem:', '').strip()
-                    if 'Section:' in p:
-                        section_name = p.replace('Section:', '').strip()
-                    elif 'Program:' in p and not course_name:
-                        course_name = p.replace('Program:', '').strip()
-                    if '(' in p and ')' in p:
-                        match = re.search(r'\((.*?)\)', p)
-                        if match:
-                            sub_code = match.group(1).strip()
+            # Check sheetname for section or group hints
+            sh_sec_match = re.search(r'(CT[-_]?\d+|Sec(?:tion)?[-_]?[A-Za-z0-9]+)', sheetname, re.IGNORECASE)
+            if sh_sec_match:
+                section_name = sh_sec_match.group(1).replace('_', '-').strip()
+            sh_grp_match = re.search(r'\b(Group[-_ ]?[A-Za-z0-9]+|Grp[-_ ]?[A-Za-z0-9]+|G[12])\b', sheetname, re.IGNORECASE)
+            if sh_grp_match:
+                sheet_group = sh_grp_match.group(1).strip()
 
-            # If section not found in header, check sheetname or filename
+            # Inspect first 4 rows for university / bifurcation header line
+            for r_top in range(1, min(5, ws.max_row + 1)):
+                r_val = str(ws.cell(r_top, 1).value or '')
+                if '|' in r_val or any(k in r_val for k in ['Bifurcation', 'Internal Marks', 'Section:', 'Program:', 'Sem:']):
+                    parts = [p.strip() for p in r_val.split('|')]
+                    for p in parts:
+                        if 'Sem:' in p or 'Semester:' in p:
+                            semester = re.sub(r'Sem(?:ester)?:', '', p, flags=re.IGNORECASE).strip()
+                        elif 'Section:' in p or 'Sec:' in p:
+                            section_name = re.sub(r'Sec(?:tion)?:', '', p, flags=re.IGNORECASE).strip()
+                        elif 'Program:' in p or 'Branch:' in p or 'Course:' in p:
+                            p_val = re.sub(r'(Program|Branch|Course):', '', p, flags=re.IGNORECASE).strip()
+                            if 'CS201' in p_val.upper() or 'BCS' in p_val.upper():
+                                course_name = "CSE"
+                            elif 'CS202' in p_val.upper() or 'AIM' in p_val.upper():
+                                course_name = "CSE-AI"
+                            else:
+                                course_name = p_val
+                        elif '(' in p and ')' in p:
+                            m = re.match(r'^(.*?)\s*\((.*?)\)', p)
+                            if m:
+                                subject_title = m.group(1).strip()
+                                sub_code = m.group(2).strip()
+                            else:
+                                subject_title = p
+                        elif not subject_title and not any(k in p.lower() for k in ['internal marks', 'bifurcation sheet', 'marks']):
+                            subject_title = p
+
             if not section_name:
-                sheet_sec_match = re.search(r'(CT[-_]?\d+|Sec(?:tion)?[-_]?[A-Za-z0-9]+)', sheetname, re.IGNORECASE)
-                if sheet_sec_match:
-                    section_name = sheet_sec_match.group(1).replace('_', '-').strip()
-                else:
-                    section_name = fn_section or (sheetname if sheetname.lower() not in ['sheet1', 'sheet 1', 'bifurcation sheet'] else 'Sec-1')
+                section_name = fn_section or (sheetname if sheetname.lower() not in ['sheet1', 'sheet 1', 'bifurcation sheet'] else 'Sec-1')
 
             if not course_name:
                 course_name = fn_course
 
-            # Check table headers for row-level section or course columns
+            # Build subject display
+            if subject_title and sub_code:
+                subject_display = f"{subject_title} ({sub_code})"
+            elif subject_title:
+                subject_display = subject_title
+            elif sub_code:
+                subject_display = sub_code
+            else:
+                subject_display = f"{course_name} Subject"
+
+            # Check table headers for row-level columns
             uid_col = 2  # default Col B
+            name_col = None
             sec_col = None
+            group_col = None
             course_col = None
+            subj_col = None
             header_row = 1
 
             for r in range(1, min(10, ws.max_row + 1)):
-                for c in range(1, min(15, ws.max_column + 1)):
+                for c in range(1, min(20, ws.max_column + 1)):
                     val = str(ws.cell(r, c).value or '').strip().upper()
                     if val in ['UID', 'UID NO', 'UID NO.', 'ROLL NO', 'ROLL NO.', 'STUDENT ID', 'REG NO']:
                         uid_col = c
                         header_row = r
-                    if val in ['SECTION', 'SEC', 'GROUP', 'CLASS']:
+                    elif val in ['NAME', 'STUDENT NAME', 'CANDIDATE NAME']:
+                        name_col = c
+                    elif val in ['GROUP', 'GRP', 'BATCH']:
+                        group_col = c
+                    elif val in ['SECTION', 'SEC', 'CLASS']:
                         sec_col = c
-                    if val in ['COURSE', 'BRANCH', 'PROGRAM']:
+                    elif val in ['COURSE', 'BRANCH', 'PROGRAM']:
                         course_col = c
+                    elif val in ['SUBJECT', 'PAPER', 'SUB CODE', 'SUBJECT NAME']:
+                        subj_col = c
 
-            # Extract UIDs
+            # Extract student rows
             for r in range(header_row + 1, ws.max_row + 1):
                 val = ws.cell(r, uid_col).value
                 if val is not None:
                     s_val = str(val).strip()
                     if s_val and s_val.lower() not in ['uid', 'roll no', 'total', 'average', 'none', 's.no.', 's.no']:
                         row_sec = str(ws.cell(r, sec_col).value or '').strip() if sec_col else section_name
+                        row_grp = str(ws.cell(r, group_col).value or '').strip() if group_col else sheet_group
                         row_course = str(ws.cell(r, course_col).value or '').strip() if course_col else course_name
+                        row_name = str(ws.cell(r, name_col).value or '').strip() if name_col else ''
+                        row_subj = str(ws.cell(r, subj_col).value or '').strip() if subj_col else subject_display
 
                         entries.append({
                             'course': row_course or course_name,
                             'section': row_sec or section_name or 'Sec-1',
                             'semester': semester,
+                            'subject_title': subject_title,
                             'sub_code': sub_code,
-                            'uid': s_val
+                            'subject': row_subj or subject_display,
+                            'group': row_grp,
+                            'uid': s_val,
+                            'name': row_name
                         })
 
     return entries
+
+
+def extract_metadata_from_entries(entries):
+    """
+    Extracts available subjects, sections, and groups from parsed student entries.
+    Provides smart group division (All, Group 1, Group 2) when groups are not explicitly defined.
+    """
+    if not entries:
+        return {
+            'subjects': [],
+            'sections': [],
+            'groups': ['All Groups (Whole Section)'],
+            'total_students': 0
+        }
+
+    subjects_dict = {}
+    sections_dict = {}
+    groups_set = set()
+
+    for e in entries:
+        subj = e.get('subject') or 'General'
+        sec = e.get('section') or 'Sec-1'
+        grp = e.get('group', '').strip()
+
+        if subj not in subjects_dict:
+            subjects_dict[subj] = {
+                'id': subj,
+                'title': e.get('subject_title') or subj,
+                'code': e.get('sub_code') or '',
+                'course': e.get('course') or '',
+                'count': 0
+            }
+        subjects_dict[subj]['count'] += 1
+
+        if sec not in sections_dict:
+            sections_dict[sec] = {
+                'id': sec,
+                'subject': subj,
+                'count': 0
+            }
+        sections_dict[sec]['count'] += 1
+
+        if grp:
+            groups_set.add(grp)
+
+    subjects = list(subjects_dict.values())
+    subjects.sort(key=lambda x: natural_sort_key(x['id']))
+
+    sections = list(sections_dict.keys())
+    sections.sort(key=natural_sort_key)
+
+    explicit_groups = list(groups_set)
+    explicit_groups.sort(key=natural_sort_key)
+
+    if explicit_groups:
+        groups = ['All Groups (Whole Section)'] + explicit_groups
+    else:
+        groups = [
+            'All Groups (Whole Section)',
+            'Group 1 (Batch 1)',
+            'Group 2 (Batch 2)'
+        ]
+
+    return {
+        'subjects': subjects,
+        'sections': sections,
+        'groups': groups,
+        'has_explicit_groups': bool(explicit_groups),
+        'total_students': len(entries)
+    }
+
+
+def filter_and_build_course(entries, subject_sel='all', section_sel='all', group_sel='all'):
+    """
+    Filters student entries by Subject, Section, and Group.
+    Returns a single Course Sheet object ready to render or download.
+    """
+    if not entries:
+        return None
+
+    filtered = []
+    for e in entries:
+        subj = e.get('subject') or ''
+        sec = e.get('section') or ''
+
+        if subject_sel and subject_sel != 'all' and subj != subject_sel:
+            continue
+        if section_sel and section_sel != 'all' and sec != section_sel:
+            continue
+        filtered.append(e)
+
+    # Sort students by UID naturally
+    filtered.sort(key=lambda x: natural_sort_key(x.get('uid', '')))
+
+    # Apply group filtering
+    if group_sel and group_sel != 'all' and 'all groups' not in group_sel.lower():
+        has_explicit = any(e.get('group') for e in filtered)
+        if has_explicit:
+            filtered = [e for e in filtered if e.get('group', '').lower() == group_sel.lower()]
+        else:
+            # Smart 50/50 split for lab batches
+            half = (len(filtered) + 1) // 2
+            if '1' in group_sel.lower() or 'g1' in group_sel.lower() or 'batch 1' in group_sel.lower():
+                filtered = filtered[:half]
+            elif '2' in group_sel.lower() or 'g2' in group_sel.lower() or 'batch 2' in group_sel.lower():
+                filtered = filtered[half:]
+
+    if not filtered:
+        return None
+
+    first = filtered[0]
+    course_name = first.get('course') or 'CSE'
+    base_section = first.get('section') or (section_sel if section_sel != 'all' else 'Sec-1')
+    
+    if group_sel and group_sel != 'all' and 'all groups' not in group_sel.lower():
+        grp_short = 'G1' if ('1' in group_sel.lower() or 'g1' in group_sel.lower()) else \
+                    ('G2' if ('2' in group_sel.lower() or 'g2' in group_sel.lower()) else group_sel)
+        section_display = f"{base_section} ({grp_short})"
+    else:
+        section_display = base_section
+
+    subj_title = first.get('subject_title') or ''
+    if subj_title and subj_title.lower() not in course_name.lower():
+        course_display = f"{course_name} - {subj_title}"
+    else:
+        course_display = course_name
+
+    sub_code = first.get('sub_code') or ''
+    semester = first.get('semester') or '5'
+    uids = [e['uid'] for e in filtered]
+
+    sub_codes = [sub_code] if sub_code else ['']
+    while len(sub_codes) < 8:
+        sub_codes.append('')
+
+    return {
+        'id': f"course_{os.urandom(3).hex()}",
+        'course_name': course_display,
+        'section': section_display,
+        'semester': semester,
+        'dates': ['', '', '', '', '', '', '', ''],
+        'sub_codes': sub_codes[:8],
+        'students': uids
+    }
+
 
 def group_and_sort_student_entries(entries):
     """
@@ -517,8 +740,8 @@ def group_and_sort_student_entries(entries):
 
     grouped = {}
     for item in entries:
-        c_raw = (item['course'] or 'Course').strip()
-        s_raw = (item['section'] or 'Sec-1').strip()
+        c_raw = (item.get('course') or 'Course').strip()
+        s_raw = (item.get('section') or 'Sec-1').strip()
         
         if 'CS201' in c_raw:
             course = "CSE"
@@ -536,12 +759,16 @@ def group_and_sort_student_entries(entries):
         section = s_raw
         key = (course, section)
         
+        subj_title = item.get('subject_title') or ''
+        sub_code = item.get('sub_code') or ''
+
         if key not in grouped:
+            c_name_full = f"{course} - {subj_title}" if subj_title and subj_title.lower() not in course.lower() else course
             grouped[key] = {
-                'course_name': course,
+                'course_name': c_name_full,
                 'section': section,
                 'semester': item.get('semester', '5'),
-                'sub_codes': [item.get('sub_code', '')] if item.get('sub_code') else [],
+                'sub_codes': [sub_code] if sub_code else [],
                 'students_set': set(),
                 'students': []
             }
@@ -571,6 +798,7 @@ def group_and_sort_student_entries(entries):
         c['dates'] = ['', '', '', '', '', '', '', '']
 
     return course_list
+
 
 def parse_uploaded_spreadsheet(file_bytes, filename):
     entries = parse_single_file(file_bytes, filename)

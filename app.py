@@ -82,11 +82,15 @@ def load_local_bifurcation():
             bytes_data = f.read()
         entries = excel_generator.parse_single_file(bytes_data, target_file)
         courses = excel_generator.group_and_sort_student_entries(entries)
+        metadata = excel_generator.extract_metadata_from_entries(entries)
         if courses:
             return jsonify({
                 "success": True,
                 "filename": target_file,
-                "courses": courses
+                "courses": courses,
+                "metadata": metadata,
+                "raw_records": entries,
+                "total_students": len(entries)
             })
     return jsonify({"success": False, "error": "Bifurcation sheet file not found on disk."}), 404
 
@@ -125,16 +129,39 @@ def upload_multiple_files():
         }), 400
 
     sorted_courses = excel_generator.group_and_sort_student_entries(all_entries)
+    metadata = excel_generator.extract_metadata_from_entries(all_entries)
 
     return jsonify({
         "success": True,
         "mode": mode,
         "files_processed": len(file_summaries),
         "total_courses": len(sorted_courses),
-        "total_students": sum(len(c['students']) for c in sorted_courses),
+        "total_students": len(all_entries),
+        "metadata": metadata,
+        "raw_records": all_entries,
         "courses": sorted_courses,
         "file_summaries": file_summaries
     })
+
+@app.route('/api/filter_and_generate', methods=['POST'])
+def filter_and_generate():
+    try:
+        data = request.get_json(force=True) or {}
+        records = data.get('raw_records', [])
+        subject_sel = data.get('subject', 'all')
+        section_sel = data.get('section', 'all')
+        group_sel = data.get('group', 'all')
+
+        course_obj = excel_generator.filter_and_build_course(records, subject_sel, section_sel, group_sel)
+        if not course_obj:
+            return jsonify({"success": False, "error": "No students match the chosen filters."}), 404
+
+        return jsonify({
+            "success": True,
+            "course": course_obj
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/upload_file', methods=['POST'])
 def upload_file():

@@ -18,7 +18,9 @@ let appData = {
   courses: [],
   activeCourseId: null,
   previewPage: 0,
-  zoom: 0.85
+  zoom: 0.85,
+  rawRecords: [],
+  metadata: null
 };
 
 function naturalSort(arr) {
@@ -107,6 +109,26 @@ async function loadInitialData() {
       renderCourseTabs();
       loadCourseIntoForm(appData.activeCourseId);
       renderPreview();
+    }
+
+    // Auto-detect and pre-load local bifurcation sheet data if available
+    try {
+      const localRes = await fetch('/api/load_local_bifurcation');
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        if (localData.success && localData.courses) {
+          appData.courses = localData.courses;
+          appData.activeCourseId = localData.courses[0].id;
+          if (localData.metadata && localData.raw_records) {
+            populateFilterDropdowns(localData.metadata, localData.raw_records);
+          }
+          renderCourseTabs();
+          loadCourseIntoForm(appData.activeCourseId);
+          renderPreview();
+        }
+      }
+    } catch (e) {
+      // Local file not mandatory
     }
   } catch (err) {
     console.error("Failed to load sample data:", err);
@@ -343,6 +365,48 @@ function setupEventListeners() {
     appData.previewPage = 0;
     renderPreview();
   });
+
+  // Auto-Filter: Subject, Section & Group Selectors
+  const subjSelect = document.getElementById('filterSubjectSelect');
+  if (subjSelect) {
+    subjSelect.addEventListener('change', () => {
+      updateSectionDropdownForSubject();
+      updateFilterPreviewCount();
+      applyFilterToSheet(false);
+    });
+  }
+
+  const secSelect = document.getElementById('filterSectionSelect');
+  if (secSelect) {
+    secSelect.addEventListener('change', () => {
+      updateFilterPreviewCount();
+      applyFilterToSheet(false);
+    });
+  }
+
+  const grpSelect = document.getElementById('filterGroupSelect');
+  if (grpSelect) {
+    grpSelect.addEventListener('change', () => {
+      updateFilterPreviewCount();
+      applyFilterToSheet(false);
+    });
+  }
+
+  const btnApply = document.getElementById('btnApplySelection');
+  if (btnApply) {
+    btnApply.addEventListener('click', (e) => {
+      e.preventDefault();
+      applyFilterToSheet(false);
+    });
+  }
+
+  const btnAllTabs = document.getElementById('btnGenerateAllTabs');
+  if (btnAllTabs) {
+    btnAllTabs.addEventListener('click', (e) => {
+      e.preventDefault();
+      generateAllSectionsTabs();
+    });
+  }
 
   document.getElementById('btnDownloadExcel').addEventListener('click', downloadExcel);
   document.getElementById('btnDownloadExcelTop').addEventListener('click', downloadExcel);
@@ -647,6 +711,10 @@ async function handleMultiFileUpload(fileList) {
     loadCourseIntoForm(appData.activeCourseId);
     renderPreview();
 
+    if (result.metadata && result.raw_records) {
+      populateFilterDropdowns(result.metadata, result.raw_records);
+    }
+
     const statusBadge = document.getElementById('uploadStatusBadge');
     statusBadge.style.display = 'block';
     statusBadge.innerHTML = `✅ <b>${result.files_processed} file(s)</b> processed: <b>${result.total_courses} sheet(s)</b> auto-grouped by <b>Course</b> & sorted <b>Section-wise</b> (${result.total_students} students total)!`;
@@ -671,6 +739,9 @@ async function loadLocalBifurcation() {
       }
       appData.activeCourseId = result.courses[0].id;
       appData.previewPage = 0;
+      if (result.metadata && result.raw_records) {
+        populateFilterDropdowns(result.metadata, result.raw_records);
+      }
       renderCourseTabs();
       loadCourseIntoForm(appData.activeCourseId);
       renderPreview();
@@ -681,6 +752,306 @@ async function loadLocalBifurcation() {
   } catch (err) {
     showToast("Could not load local file", true);
   }
+}
+
+// =========================================================================
+// AUTO-FETCH & FILTER: SUBJECT, SECTION & GROUP SELECTION LOGIC
+// =========================================================================
+
+function populateFilterDropdowns(metadata, records) {
+  if (!records || records.length === 0) return;
+  appData.rawRecords = records;
+  appData.metadata = metadata;
+
+  const subjSelect = document.getElementById('filterSubjectSelect');
+  const secSelect = document.getElementById('filterSectionSelect');
+  const grpSelect = document.getElementById('filterGroupSelect');
+
+  if (!subjSelect || !secSelect || !grpSelect) return;
+
+  // 1. Populate Subjects Dropdown
+  subjSelect.innerHTML = '';
+  const subjects = metadata.subjects || [];
+  if (subjects.length === 0) {
+    subjSelect.innerHTML = '<option value="all">All Subjects</option>';
+  } else {
+    if (subjects.length > 1) {
+      subjSelect.innerHTML += '<option value="all">All Subjects (Combined)</option>';
+    }
+    subjects.forEach((s, idx) => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      const count = records.filter(r => (r.subject || r.course) === s.id).length || s.count;
+      opt.innerText = `${s.display || s.title || s.id} (${count} students)`;
+      if (idx === 0) opt.selected = true;
+      subjSelect.appendChild(opt);
+    });
+  }
+
+  // 2. Populate Sections Dropdown
+  updateSectionDropdownForSubject();
+
+  // 3. Populate Groups Dropdown
+  grpSelect.innerHTML = '';
+  const groups = metadata.groups || ['All Groups (Whole Section)'];
+  groups.forEach((g, idx) => {
+    const opt = document.createElement('option');
+    opt.value = g;
+    opt.innerText = g;
+    if (idx === 0) opt.selected = true;
+    grpSelect.appendChild(opt);
+  });
+
+  // Highlight the Auto-Filter box
+  const box = document.getElementById('autoFilterBox');
+  if (box) {
+    box.style.borderColor = '#2563eb';
+    box.style.background = '#f0f9ff';
+  }
+
+  updateFilterPreviewCount();
+}
+
+function updateSectionDropdownForSubject() {
+  const subjSelect = document.getElementById('filterSubjectSelect');
+  const secSelect = document.getElementById('filterSectionSelect');
+  if (!subjSelect || !secSelect) return;
+
+  const selectedSubj = subjSelect.value;
+  secSelect.innerHTML = '';
+
+  let availableSections = [];
+  if (appData.rawRecords && appData.rawRecords.length > 0) {
+    const matching = (selectedSubj === 'all') 
+      ? appData.rawRecords 
+      : appData.rawRecords.filter(r => (r.subject || r.course) === selectedSubj);
+
+    const secCounts = {};
+    matching.forEach(r => {
+      const s = r.section || 'Sec-1';
+      secCounts[s] = (secCounts[s] || 0) + 1;
+    });
+
+    availableSections = Object.keys(secCounts).sort((a, b) => {
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    }).map(s => ({ name: s, count: secCounts[s] }));
+  }
+
+  if (availableSections.length === 0) {
+    secSelect.innerHTML = '<option value="all">All Sections</option>';
+  } else {
+    if (availableSections.length > 1) {
+      secSelect.innerHTML += '<option value="all">All Sections</option>';
+    }
+    availableSections.forEach((sec, idx) => {
+      const opt = document.createElement('option');
+      opt.value = sec.name;
+      opt.innerText = `${sec.name} (${sec.count} students)`;
+      if (idx === 0) opt.selected = true;
+      secSelect.appendChild(opt);
+    });
+  }
+}
+
+function getFilteredStudents() {
+  if (!appData.rawRecords || appData.rawRecords.length === 0) {
+    const active = getActiveCourse();
+    return (active && active.students) ? active.students.map(u => ({ uid: u })) : [];
+  }
+
+  const subjSelect = document.getElementById('filterSubjectSelect');
+  const secSelect = document.getElementById('filterSectionSelect');
+  const grpSelect = document.getElementById('filterGroupSelect');
+
+  const subjSel = subjSelect ? subjSelect.value : 'all';
+  const secSel = secSelect ? secSelect.value : 'all';
+  const grpSel = grpSelect ? grpSelect.value : 'all';
+
+  let filtered = appData.rawRecords.filter(r => {
+    const rSubj = r.subject || r.course || '';
+    const rSec = r.section || '';
+    if (subjSel !== 'all' && rSubj !== subjSel) return false;
+    if (secSel !== 'all' && rSec !== secSel) return false;
+    return true;
+  });
+
+  // Sort by UID naturally
+  filtered = filtered.sort((a, b) => {
+    return (a.uid || '').localeCompare(b.uid || '', undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  // Group filtering
+  if (grpSel && grpSel !== 'all' && !grpSel.toLowerCase().includes('all groups')) {
+    const hasExplicit = filtered.some(r => r.group && r.group.trim());
+    if (hasExplicit) {
+      filtered = filtered.filter(r => (r.group || '').toLowerCase() === grpSel.toLowerCase());
+    } else {
+      // Smart 50/50 split for lab batches
+      const half = Math.ceil(filtered.length / 2);
+      if (grpSel.includes('1') || grpSel.toLowerCase().includes('g1') || grpSel.toLowerCase().includes('batch 1')) {
+        filtered = filtered.slice(0, half);
+      } else if (grpSel.includes('2') || grpSel.toLowerCase().includes('g2') || grpSel.toLowerCase().includes('batch 2')) {
+        filtered = filtered.slice(half);
+      }
+    }
+  }
+
+  return filtered;
+}
+
+function updateFilterPreviewCount() {
+  const filtered = getFilteredStudents();
+  const count = filtered.length;
+  const badge = document.getElementById('filterStatsBadge');
+  const countBadge = document.getElementById('filterCountBadge');
+  const summaryText = document.getElementById('filterSummaryText');
+
+  const spp = appData.settings.students_per_page || 7;
+  const pages = Math.ceil(count / spp) || 1;
+
+  if (badge) {
+    badge.style.display = 'inline-block';
+    badge.innerText = `${count} Students`;
+  }
+  if (countBadge) {
+    countBadge.innerText = `${count} Students (${pages} ${pages === 1 ? 'Page' : 'Pages'})`;
+  }
+
+  const subjSelect = document.getElementById('filterSubjectSelect');
+  const secSelect = document.getElementById('filterSectionSelect');
+  const grpSelect = document.getElementById('filterGroupSelect');
+
+  const subjSel = subjSelect ? subjSelect.value : 'all';
+  const secSel = secSelect ? secSelect.value : 'all';
+  const grpSel = grpSelect ? grpSelect.value : 'all';
+
+  const subjLabel = subjSel === 'all' ? 'All Subjects' : (subjSel.length > 25 ? subjSel.substring(0, 25) + '...' : subjSel);
+  const secLabel = secSel === 'all' ? 'All Secs' : secSel;
+  const grpLabel = grpSel.includes('1') ? 'Group 1' : (grpSel.includes('2') ? 'Group 2' : 'All Groups');
+
+  if (summaryText) {
+    summaryText.innerHTML = `<b>${subjLabel}</b> &bull; <b>${secLabel}</b> &bull; <b>${grpLabel}</b>`;
+  }
+}
+
+function applyFilterToSheet(asNewCourse = false) {
+  const filtered = getFilteredStudents();
+  if (filtered.length === 0) {
+    showToast("No students found matching your selected Subject, Section, and Group.", true);
+    return;
+  }
+
+  const first = filtered[0];
+  const secSelect = document.getElementById('filterSectionSelect');
+  const grpSelect = document.getElementById('filterGroupSelect');
+
+  const secSel = secSelect ? secSelect.value : 'all';
+  const grpSel = grpSelect ? grpSelect.value : 'all';
+
+  const baseSec = first.section || (secSel !== 'all' ? secSel : 'Sec-1');
+  let secDisplay = baseSec;
+  if (grpSel && grpSel !== 'all' && !grpSel.toLowerCase().includes('all groups')) {
+    const grpShort = (grpSel.includes('1') || grpSel.toLowerCase().includes('g1')) ? 'Group 1' :
+                     ((grpSel.includes('2') || grpSel.toLowerCase().includes('g2')) ? 'Group 2' : grpSel);
+    secDisplay = `${baseSec} (${grpShort})`;
+  }
+
+  let courseDisplay = first.course || 'CSE';
+  if (first.subject_title && !courseDisplay.toLowerCase().includes(first.subject_title.toLowerCase())) {
+    courseDisplay = `${courseDisplay} - ${first.subject_title}`;
+  }
+
+  const subCode = first.sub_code || '';
+  const semester = first.semester || '5';
+  const uids = filtered.map(r => r.uid);
+
+  const subCodes = [subCode];
+  while (subCodes.length < 8) subCodes.push('');
+
+  let targetCourse;
+  if (asNewCourse || appData.courses.length === 0) {
+    targetCourse = {
+      id: `course_${Date.now()}`,
+      course_name: courseDisplay,
+      section: secDisplay,
+      semester: semester,
+      dates: ['', '', '', '', '', '', '', ''],
+      sub_codes: subCodes,
+      students: uids
+    };
+    appData.courses.push(targetCourse);
+    appData.activeCourseId = targetCourse.id;
+  } else {
+    targetCourse = getActiveCourse();
+    targetCourse.course_name = courseDisplay;
+    targetCourse.section = secDisplay;
+    targetCourse.semester = semester;
+    if (subCode) targetCourse.sub_codes[0] = subCode;
+    targetCourse.students = uids;
+  }
+
+  appData.previewPage = 0;
+  loadCourseIntoForm(appData.activeCourseId);
+  renderCourseTabs();
+  renderPreview();
+  showToast(`✅ Generated sheet for ${courseDisplay} | ${secDisplay} (${uids.length} UIDs)!`);
+}
+
+function generateAllSectionsTabs() {
+  if (!appData.rawRecords || appData.rawRecords.length === 0) {
+    showToast("Please upload an Excel file first.", true);
+    return;
+  }
+
+  const secSelect = document.getElementById('filterSectionSelect');
+  let sections = [];
+  if (secSelect) {
+    for (let opt of secSelect.options) {
+      if (opt.value && opt.value !== 'all') sections.push(opt.value);
+    }
+  }
+
+  if (sections.length === 0) {
+    applyFilterToSheet(false);
+    return;
+  }
+
+  appData.courses = [];
+  sections.forEach((sec, idx) => {
+    const secStudents = appData.rawRecords.filter(r => r.section === sec);
+    if (secStudents.length === 0) return;
+
+    const first = secStudents[0];
+    let courseDisplay = first.course || 'CSE';
+    if (first.subject_title && !courseDisplay.toLowerCase().includes(first.subject_title.toLowerCase())) {
+      courseDisplay = `${courseDisplay} - ${first.subject_title}`;
+    }
+
+    const subCode = first.sub_code || '';
+    const subCodes = [subCode];
+    while (subCodes.length < 8) subCodes.push('');
+
+    const uids = naturalSort(secStudents.map(r => r.uid));
+
+    appData.courses.push({
+      id: `sec_course_${idx + 1}_${Date.now()}`,
+      course_name: courseDisplay,
+      section: sec,
+      semester: first.semester || '5',
+      dates: ['', '', '', '', '', '', '', ''],
+      sub_codes: subCodes,
+      students: uids
+    });
+  });
+
+  if (appData.courses.length > 0) {
+    appData.activeCourseId = appData.courses[0].id;
+  }
+  appData.previewPage = 0;
+  loadCourseIntoForm(appData.activeCourseId);
+  renderCourseTabs();
+  renderPreview();
+  showToast(`Generated ${appData.courses.length} Section sheets as separate tabs!`);
 }
 
 function applyZoom() {
