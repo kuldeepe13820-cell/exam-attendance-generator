@@ -5,7 +5,7 @@ let appData = {
     institute_name: "CHANDIGARH UNIVERSITY, GHARUAN (MOHALI)",
     exam_title: "ATTENDANCE SHEET FOR THEORY (REGULAR) EXAMINATION MAY-JUNE 2024",
     form_code: "EX-12",
-    centre_block: "B1 (Morning)",
+    centre_block: "B3 (Morning)",
     shift_time: "9:30 AM - 12:30 PM",
     show_logo: true,
     logo_path: "static/default_logo.png",
@@ -141,8 +141,41 @@ function syncSettingsToInputs() {
   document.getElementById('inputInstName').value = s.institute_name;
   document.getElementById('inputExamTitle').value = s.exam_title;
   document.getElementById('inputFormCode').value = s.form_code;
-  document.getElementById('inputCentreBlock').value = s.centre_block;
-  document.getElementById('inputShiftTime').value = s.shift_time;
+
+  // Sync Centre / Block Dropdown & Custom Field
+  const blockSelect = document.getElementById('inputCentreBlock');
+  const customBlock = document.getElementById('inputCustomCentreBlock');
+  if (blockSelect) {
+    const hasOpt = Array.from(blockSelect.options).some(o => o.value === s.centre_block);
+    if (hasOpt) {
+      blockSelect.value = s.centre_block;
+      if (customBlock) customBlock.style.display = 'none';
+    } else {
+      blockSelect.value = 'custom';
+      if (customBlock) {
+        customBlock.style.display = 'block';
+        customBlock.value = s.centre_block || '';
+      }
+    }
+  }
+
+  // Sync Shift Time Dropdown & Custom Field
+  const shiftSelect = document.getElementById('inputShiftTime');
+  const customShift = document.getElementById('inputCustomShiftTime');
+  if (shiftSelect) {
+    const hasOpt = Array.from(shiftSelect.options).some(o => o.value === s.shift_time);
+    if (hasOpt) {
+      shiftSelect.value = s.shift_time;
+      if (customShift) customShift.style.display = 'none';
+    } else {
+      shiftSelect.value = 'custom';
+      if (customShift) {
+        customShift.style.display = 'block';
+        customShift.value = s.shift_time || '';
+      }
+    }
+  }
+
   document.getElementById('checkShowLogo').checked = s.show_logo;
   document.getElementById('checkHandwrittenMode').checked = s.handwritten_mode;
   document.getElementById('selectStudentsPerPage').value = spp;
@@ -185,8 +218,71 @@ function setupEventListeners() {
   bindChange('inputInstName', 'institute_name');
   bindChange('inputExamTitle', 'exam_title');
   bindChange('inputFormCode', 'form_code');
-  bindChange('inputCentreBlock', 'centre_block');
-  bindChange('inputShiftTime', 'shift_time');
+
+  // Smart Centre / Block Dropdown with Auto Shift Time Sync
+  const blockSelect = document.getElementById('inputCentreBlock');
+  const customBlock = document.getElementById('inputCustomCentreBlock');
+  const shiftSelect = document.getElementById('inputShiftTime');
+  const customShift = document.getElementById('inputCustomShiftTime');
+
+  if (blockSelect) {
+    blockSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'custom') {
+        if (customBlock) {
+          customBlock.style.display = 'block';
+          customBlock.focus();
+          appData.settings.centre_block = customBlock.value.trim() || 'Custom Block';
+        }
+      } else {
+        if (customBlock) customBlock.style.display = 'none';
+        appData.settings.centre_block = val;
+
+        // Auto-switch Shift Time based on Morning vs Evening selection
+        if (val.includes('Morning')) {
+          if (shiftSelect) shiftSelect.value = '9:30 AM - 12:30 PM';
+          if (customShift) customShift.style.display = 'none';
+          appData.settings.shift_time = '9:30 AM - 12:30 PM';
+        } else if (val.includes('Evening')) {
+          if (shiftSelect) shiftSelect.value = '1:30 PM - 4:30 PM';
+          if (customShift) customShift.style.display = 'none';
+          appData.settings.shift_time = '1:30 PM - 4:30 PM';
+        }
+      }
+      renderPreview();
+    });
+  }
+
+  if (customBlock) {
+    customBlock.addEventListener('input', (e) => {
+      appData.settings.centre_block = e.target.value;
+      renderPreview();
+    });
+  }
+
+  if (shiftSelect) {
+    shiftSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'custom') {
+        if (customShift) {
+          customShift.style.display = 'block';
+          customShift.focus();
+          appData.settings.shift_time = customShift.value.trim() || '';
+        }
+      } else {
+        if (customShift) customShift.style.display = 'none';
+        appData.settings.shift_time = val;
+      }
+      renderPreview();
+    });
+  }
+
+  if (customShift) {
+    customShift.addEventListener('input', (e) => {
+      appData.settings.shift_time = e.target.value;
+      renderPreview();
+    });
+  }
 
   document.getElementById('checkShowLogo').addEventListener('change', (e) => {
     appData.settings.show_logo = e.target.checked;

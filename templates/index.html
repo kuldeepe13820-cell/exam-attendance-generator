@@ -176,11 +176,27 @@
           </div>
           <div class="form-group">
             <label for="inputCentreBlock">Centre / Block No</label>
-            <input type="text" id="inputCentreBlock" class="form-control" value="B1 (Morning)">
+            <select id="inputCentreBlock" class="form-control" style="font-weight: 600;">
+              <option value="B3 (Morning)" selected>B3 (Morning)</option>
+              <option value="B3 (Evening)">B3 (Evening)</option>
+              <option value="B1 (Morning)">B1 (Morning)</option>
+              <option value="B1 (Evening)">B1 (Evening)</option>
+              <option value="B2 (Morning)">B2 (Morning)</option>
+              <option value="B2 (Evening)">B2 (Evening)</option>
+              <option value="B4 (Morning)">B4 (Morning)</option>
+              <option value="B4 (Evening)">B4 (Evening)</option>
+              <option value="custom">✏️ Custom Block...</option>
+            </select>
+            <input type="text" id="inputCustomCentreBlock" class="form-control" style="display: none; margin-top: 4px; font-size: 0.8rem;" placeholder="Enter custom block...">
           </div>
           <div class="form-group">
             <label for="inputShiftTime">Shift Time</label>
-            <input type="text" id="inputShiftTime" class="form-control" value="9:30 AM - 12:30 PM">
+            <select id="inputShiftTime" class="form-control" style="font-weight: 600;">
+              <option value="9:30 AM - 12:30 PM" selected>9:30 AM - 12:30 PM</option>
+              <option value="1:30 PM - 4:30 PM">1:30 PM - 4:30 PM</option>
+              <option value="custom">✏️ Custom Time...</option>
+            </select>
+            <input type="text" id="inputCustomShiftTime" class="form-control" style="display: none; margin-top: 4px; font-size: 0.8rem;" placeholder="e.g. 10:00 AM - 1:00 PM">
           </div>
         </div>
 

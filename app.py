@@ -17,7 +17,7 @@ SAMPLE_DATA = {
         "institute_name": "CHANDIGARH UNIVERSITY, GHARUAN (MOHALI)",
         "exam_title": "ATTENDANCE SHEET FOR THEORY (REGULAR) EXAMINATION MAY-JUNE 2024",
         "form_code": "EX-12",
-        "centre_block": "B1 (Morning)",
+        "centre_block": "B3 (Morning)",
         "shift_time": "9:30 AM - 12:30 PM",
         "show_logo": True,
         "logo_path": DEFAULT_LOGO,
