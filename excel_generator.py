@@ -67,22 +67,22 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
     ws.page_setup.fitToHeight = num_pages
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     
-    # Margins in inches (narrow margins for A4 landscape: 0.2 inch)
-    ws.page_margins.left = 0.2
-    ws.page_margins.right = 0.2
-    ws.page_margins.top = 0.2
-    ws.page_margins.bottom = 0.2
+    # Margins in inches (narrow 0.15 in margins for maximum printable width)
+    ws.page_margins.left = 0.15
+    ws.page_margins.right = 0.15
+    ws.page_margins.top = 0.15
+    ws.page_margins.bottom = 0.15
     ws.page_margins.header = 0.1
     ws.page_margins.footer = 0.1
     ws.print_options.horizontalCentered = True
     ws.print_options.verticalCentered = True
 
-    # 2. Column Dimensions - EQUAL BOX WIDTHS FOR ALL 8 EXAM COLUMNS
-    ws.column_dimensions['A'].width = 15.5  # UID No.
-    ws.column_dimensions['B'].width = 13.5  # Semester / Label
-    # Identical width for all 8 exam columns C to J
+    # 2. Column Dimensions - EXPANDED EQUAL BOX WIDTHS FOR ALL 8 EXAM COLUMNS
+    ws.column_dimensions['A'].width = 14.5  # UID No.
+    ws.column_dimensions['B'].width = 12.0  # Semester / Label
+    # Identical width for all 8 exam columns C to J - WIDER (14.2 each!)
     for c in ['C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
-        ws.column_dimensions[c].width = 13.0
+        ws.column_dimensions[c].width = 14.2
 
     # Extract global settings
     institute_name = global_settings.get('institute_name', 'CHANDIGARH UNIVERSITY, GHARUAN (MOHALI)').strip()
@@ -123,71 +123,71 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
         if page_idx > 0:
             ws.row_breaks.append(Break(id=R - 1))
 
-        # --- Row R: Form Code (EX-12) & Top padding (14 pt) ---
-        ws.row_dimensions[R].height = 14
+        # --- Row R: Form Code (EX-12) & Top padding (11 pt compact) ---
+        ws.row_dimensions[R].height = 11
         cell_ex = ws.cell(R, 10, form_code)
-        cell_ex.font = Font(name='Arial', size=10, bold=True)
+        cell_ex.font = Font(name='Arial', size=9, bold=True)
         cell_ex.alignment = Alignment(horizontal='right', vertical='center')
 
-        # Add Logo on top left if enabled (scale nicely for Chandigarh University rectangular emblem)
+        # Add Logo on top left if enabled (compact 25 pt height)
         if show_logo and logo_path and os.path.exists(logo_path):
             try:
                 xl_img = XLImage(logo_path)
-                xl_img.height = 36
-                xl_img.width = 65
+                xl_img.height = 25
+                xl_img.width = 50
                 ws.add_image(xl_img, f'A{R}')
             except Exception as e:
                 print(f"Warning: could not add logo to Excel sheet: {e}")
 
-        # --- Row R+1: University Name (18 pt) ---
+        # --- Row R+1: University Name (15 pt compact) ---
         R_uni = R + 1
-        ws.row_dimensions[R_uni].height = 18
+        ws.row_dimensions[R_uni].height = 15
         ws.merge_cells(f'A{R_uni}:J{R_uni}')
         cell_uni = ws.cell(R_uni, 1, institute_name)
-        cell_uni.font = Font(name='Arial', size=12.5, bold=True, color='8B0000' if 'CHANDIGARH' in institute_name else '111827')
+        cell_uni.font = Font(name='Arial', size=11.0, bold=True, color='8B0000' if 'CHANDIGARH' in institute_name else '111827')
         cell_uni.alignment = Alignment(horizontal='center', vertical='center')
 
-        # --- Row R+2: Exam Title (14 pt) ---
+        # --- Row R+2: Exam Title (12 pt compact) ---
         R_exam = R + 2
-        ws.row_dimensions[R_exam].height = 14
+        ws.row_dimensions[R_exam].height = 12
         ws.merge_cells(f'A{R_exam}:J{R_exam}')
         cell_title = ws.cell(R_exam, 1, exam_title)
-        cell_title.font = Font(name='Arial', size=9.5, bold=True)
+        cell_title.font = Font(name='Arial', size=8.5, bold=True)
         cell_title.alignment = Alignment(horizontal='center', vertical='center')
 
-        # --- Row R+3: Course/Branch | Centre/Block | Shift Time (14 pt) ---
+        # --- Row R+3: Course/Branch | Centre/Block | Shift Time (12 pt compact) ---
         R_info = R + 3
-        ws.row_dimensions[R_info].height = 14
+        ws.row_dimensions[R_info].height = 12
         
         ws.merge_cells(f'A{R_info}:C{R_info}')
         c_branch = ws.cell(R_info, 1, f"Course/Branch: {course_display}")
-        c_branch.font = Font(name='Arial', size=9.0, bold=True)
+        c_branch.font = Font(name='Arial', size=8.5, bold=True)
         c_branch.alignment = Alignment(horizontal='left', vertical='center')
 
         ws.merge_cells(f'D{R_info}:G{R_info}')
         c_centre = ws.cell(R_info, 4, f"Centre/Block No: {centre_block}")
-        c_centre.font = Font(name='Arial', size=9.0, bold=True)
+        c_centre.font = Font(name='Arial', size=8.5, bold=True)
         c_centre.alignment = Alignment(horizontal='center', vertical='center')
 
         ws.merge_cells(f'H{R_info}:J{R_info}')
         c_shift = ws.cell(R_info, 8, f"Shift Time: {shift_time}")
-        c_shift.font = Font(name='Arial', size=9.0, bold=True)
+        c_shift.font = Font(name='Arial', size=8.5, bold=True)
         c_shift.alignment = Alignment(horizontal='right', vertical='center')
 
-        # --- Row R+4: Table Header 1 (UID No., Semester, Dates) (18 pt) ---
+        # --- Row R+4: Table Header 1 (UID No., Semester, Dates) (17 pt) ---
         R_h1 = R + 4
-        ws.row_dimensions[R_h1].height = 18
+        ws.row_dimensions[R_h1].height = 17
         
         R_h2 = R + 5
         ws.row_dimensions[R_h2].height = 22
 
         ws.merge_cells(f'A{R_h1}:A{R_h2}')
         c_uid = ws.cell(R_h1, 1, 'UID No.')
-        c_uid.font = Font(name='Arial', size=9.5, bold=True)
+        c_uid.font = Font(name='Arial', size=9.0, bold=True)
         c_uid.alignment = Alignment(horizontal='center', vertical='center')
 
         c_sem = ws.cell(R_h1, 2, f"Semester: {semester}")
-        c_sem.font = Font(name='Arial', size=8.5, bold=True)
+        c_sem.font = Font(name='Arial', size=8.0, bold=True)
         c_sem.alignment = Alignment(horizontal='center', vertical='center')
 
         # Dates in columns C to J
@@ -221,21 +221,21 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
 
         apply_range_style(ws, f'A{R_h1}:J{R_h2}', border=table_border, fill=header_fill)
 
-        # --- Students (Configurable 7 or 8 UIDs per sheet page) ---
+        # --- Students (Configurable 7 or 8 UIDs per sheet page - EXPANDED HEIGHTS) ---
         if students_per_page == 7:
+            row_ab_h = 15.0
+            row_omr_h = 15.0
+            row_sig_h = 27.0  # Extra roomy signature box for 7 UIDs!
+            inv_h = 23.0
+        elif students_per_page == 8:
             row_ab_h = 14.0
             row_omr_h = 14.0
-            row_sig_h = 25.0  # Roomy signature box for 7 UIDs!
-            inv_h = 22.0
-        elif students_per_page == 8:
+            row_sig_h = 22.5  # Taller signature box for 8 UIDs!
+            inv_h = 21.0
+        else:
             row_ab_h = 13.5
             row_omr_h = 13.5
-            row_sig_h = 20.0  # Balanced signature box for 8 UIDs!
-            inv_h = 20.0
-        else:
-            row_ab_h = 13.0
-            row_omr_h = 13.0
-            row_sig_h = max(18.0, 25.0 - (students_per_page - 7) * 2)
+            row_sig_h = max(18.0, 26.0 - (students_per_page - 7) * 2)
             inv_h = 20.0
 
         page_start_student = page_idx * students_per_page

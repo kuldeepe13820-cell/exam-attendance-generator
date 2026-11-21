@@ -802,7 +802,7 @@ function generatePageHtml(course, pageIndex, totalPages) {
   pageContainer.innerHTML = `
     <!-- Top Row: Logo & EX-12 Form Code -->
     <div class="sheet-top-row">
-      <div class="sheet-logo-area" style="width: 75px; height: 38px;">
+      <div class="sheet-logo-area">
         ${logoHtml}
       </div>
       <div class="sheet-form-code">${s.form_code}</div>

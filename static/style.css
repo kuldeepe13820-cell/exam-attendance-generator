@@ -413,7 +413,7 @@ body {
   min-height: 210mm;
   max-height: 210mm;
   background: white;
-  padding: 6mm 8mm;
+  padding: 4mm 5mm;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
   box-sizing: border-box;
   display: flex;
@@ -427,17 +427,17 @@ body {
   overflow: hidden;
 }
 
-/* EX-12 Sheet Inner Styles */
+/* EX-12 Sheet Inner Styles (Compact Header for Increased Table Width & Row Height) */
 .sheet-top-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  min-height: 24px;
+  min-height: 16px;
 }
 
 .sheet-logo-area {
-  width: 75px;
-  height: 38px;
+  width: 55px;
+  height: 26px;
   display: flex;
   align-items: center;
 }
@@ -450,7 +450,7 @@ body {
 
 .sheet-form-code {
   font-family: Arial, sans-serif;
-  font-size: 10pt;
+  font-size: 8.5pt;
   font-weight: bold;
   text-align: right;
   color: #000;
@@ -458,37 +458,37 @@ body {
 
 .sheet-inst-title {
   font-family: Arial, sans-serif;
-  font-size: 13pt;
+  font-size: 11pt;
   font-weight: bold;
   text-align: center;
   color: #8B0000;
-  line-height: 1.15;
-  margin-top: -10px;
-  margin-bottom: 2px;
+  line-height: 1.1;
+  margin-top: -6px;
+  margin-bottom: 1px;
 }
 
 .sheet-exam-title {
   font-family: Arial, sans-serif;
-  font-size: 10pt;
+  font-size: 8.5pt;
   font-weight: bold;
   text-align: center;
   color: #000;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .sheet-info-strip {
   display: flex;
   justify-content: space-between;
   font-family: Arial, sans-serif;
-  font-size: 9pt;
+  font-size: 8pt;
   font-weight: bold;
   color: #000;
-  margin-bottom: 3px;
-  padding: 0 2px;
+  margin-bottom: 2px;
+  padding: 1px 2px;
 }
 
 /* =========================================================
-   EXAMINATION TABLE - STRICT EQUAL BOX WIDTHS
+   EXAMINATION TABLE - STRICT EQUAL BOX WIDTHS (WIDER COLUMNS)
 ========================================================= */
 .exam-table {
   width: 100% !important;
@@ -501,7 +501,7 @@ body {
 
 .exam-table th, .exam-table td {
   border: 1px solid #000000 !important;
-  padding: 1px 3px;
+  padding: 1px 2px;
   text-align: center;
   vertical-align: middle;
   word-wrap: break-word;
@@ -513,73 +513,75 @@ body {
   font-weight: bold;
 }
 
-/* Col A: UID No. */
+/* Col A: UID No. (Leaner so exam cols can be wider) */
 .exam-table .th-uid, .exam-table .td-uid {
-  width: 13.0% !important;
-  min-width: 13.0% !important;
-  max-width: 13.0% !important;
-  font-size: 9pt;
+  width: 12.0% !important;
+  min-width: 12.0% !important;
+  max-width: 12.0% !important;
+  font-size: 8.5pt;
   font-weight: bold;
   background-color: #fafafa;
 }
 
-/* Col B: Semester / Label */
+/* Col B: Semester / Label (Leaner so exam cols can be wider) */
 .exam-table .th-sem, .exam-table .td-label {
-  width: 11.0% !important;
-  min-width: 11.0% !important;
-  max-width: 11.0% !important;
-  font-size: 8pt;
+  width: 10.0% !important;
+  min-width: 10.0% !important;
+  max-width: 10.0% !important;
+  font-size: 7.5pt;
   text-align: left;
-  padding-left: 5px;
+  padding-left: 4px;
 }
 
 .exam-table .td-label.sig-label {
   font-weight: bold;
 }
 
-/* Cols C to J: Exactly EQUAL box width (76% / 8 = 9.5% each) */
+/* Cols C to J: Exactly EQUAL box width (78% / 8 = 9.75% each) - WIDER! */
 .exam-table .th-exam-col, .exam-table td:not(.td-uid):not(.td-label) {
-  width: 9.5% !important;
-  min-width: 9.5% !important;
-  max-width: 9.5% !important;
+  width: 9.75% !important;
+  min-width: 9.75% !important;
+  max-width: 9.75% !important;
   font-size: 7.5pt;
   line-height: 1.15;
   padding: 1px;
 }
 
-/* Box Heights: 7 UIDs vs 8 UIDs per sheet */
+/* Box Heights: 7 UIDs vs 8 UIDs per sheet (Expanded with extra vertical budget!) */
 .layout-7uid .exam-table .row-ab,
 .layout-7uid .exam-table .row-omr {
-  height: 15px !important;
+  height: 16px !important;
+  line-height: 16px !important;
 }
 .layout-7uid .exam-table .row-sig {
-  height: 25px !important; /* Generous, roomy physical signature box */
+  height: 28px !important; /* Extra tall physical signature box! */
   background-color: #fffef8;
 }
 .layout-7uid .sheet-invigilator-row td {
-  height: 22px !important;
+  height: 23px !important;
 }
 
-/* 8 UIDs per sheet layout (budgeted for 100% 1-page fit) */
+/* 8 UIDs per sheet layout (expanded height with compact header!) */
 .layout-8uid .exam-table .row-ab,
 .layout-8uid .exam-table .row-omr {
-  height: 13.5px !important;
+  height: 14.5px !important;
+  line-height: 14.5px !important;
 }
 .layout-8uid .exam-table .row-sig {
-  height: 20.5px !important;
+  height: 23px !important; /* Taller signature box for 8 UIDs! */
   background-color: #fffef8;
 }
 .layout-8uid .sheet-invigilator-row td {
-  height: 20px !important;
+  height: 21px !important;
 }
 
 /* Fallback default */
 .exam-table .row-ab,
 .exam-table .row-omr {
-  height: 14.5px !important;
+  height: 15px !important;
 }
 .exam-table .row-sig {
-  height: 24px !important;
+  height: 25px !important;
   background-color: #fffef8;
 }
 
@@ -600,9 +602,9 @@ body {
 }
 
 .sheet-invigilator-label {
-  width: 24.0% !important; /* 13.0% + 11.0% = 24.0% exactly matches Col A + Col B */
-  min-width: 24.0% !important;
-  max-width: 24.0% !important;
+  width: 22.0% !important; /* 12.0% + 10.0% = 22.0% exactly matches Col A + Col B */
+  min-width: 22.0% !important;
+  max-width: 22.0% !important;
   font-weight: bold;
   text-align: left;
   padding-left: 5px;
@@ -610,9 +612,9 @@ body {
 }
 
 .sheet-invigilator-col {
-  width: 9.5% !important;
-  min-width: 9.5% !important;
-  max-width: 9.5% !important;
+  width: 9.75% !important;
+  min-width: 9.75% !important;
+  max-width: 9.75% !important;
 }
 
 .sheet-bottom-strip {
@@ -702,21 +704,36 @@ body {
     break-after: avoid !important;
   }
 
+  .sheet-top-row {
+    min-height: 16px !important;
+  }
+
+  .sheet-logo-area {
+    width: 55px !important;
+    height: 26px !important;
+  }
+
+  .sheet-form-code {
+    font-size: 8.5pt !important;
+  }
+
   .sheet-inst-title {
-    font-size: 12pt !important;
+    font-size: 11pt !important;
     color: #000 !important;
     margin-top: -6px !important;
-    margin-bottom: 2px !important;
+    margin-bottom: 1px !important;
+    line-height: 1.1 !important;
   }
 
   .sheet-exam-title {
-    font-size: 9.5pt !important;
+    font-size: 8.5pt !important;
     margin-bottom: 2px !important;
   }
 
   .sheet-info-strip {
-    font-size: 8.5pt !important;
-    margin-bottom: 3px !important;
+    font-size: 8pt !important;
+    margin-bottom: 2px !important;
+    padding: 1px 0 !important;
   }
 
   .exam-table th {
@@ -725,32 +742,32 @@ body {
     print-color-adjust: exact;
   }
 
-  /* Print heights for 7 UIDs layout */
+  /* Print heights for 7 UIDs layout (Roomy & Expanded!) */
   .layout-7uid .exam-table .row-ab,
   .layout-7uid .exam-table .row-omr {
-    height: 14.5px !important;
-    line-height: 14.5px !important;
+    height: 16px !important;
+    line-height: 16px !important;
   }
   .layout-7uid .exam-table .row-sig {
-    height: 25px !important;
+    height: 28px !important;
     background-color: #ffffff !important;
   }
   .layout-7uid .sheet-invigilator-row td {
-    height: 22px !important;
+    height: 23px !important;
   }
 
-  /* Print heights for 8 UIDs layout */
+  /* Print heights for 8 UIDs layout (Taller signature box!) */
   .layout-8uid .exam-table .row-ab,
   .layout-8uid .exam-table .row-omr {
-    height: 13.5px !important;
-    line-height: 13.5px !important;
+    height: 14.5px !important;
+    line-height: 14.5px !important;
   }
   .layout-8uid .exam-table .row-sig {
-    height: 20px !important;
+    height: 23px !important;
     background-color: #ffffff !important;
   }
   .layout-8uid .sheet-invigilator-row td {
-    height: 19px !important;
+    height: 21px !important;
   }
 
   /* Fallback defaults */
