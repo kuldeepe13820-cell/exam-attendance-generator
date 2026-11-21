@@ -221,7 +221,23 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
 
         apply_range_style(ws, f'A{R_h1}:J{R_h2}', border=table_border, fill=header_fill)
 
-        # --- Students (Default 7 UIDs per page block) ---
+        # --- Students (Configurable 7 or 8 UIDs per sheet page) ---
+        if students_per_page == 7:
+            row_ab_h = 14.0
+            row_omr_h = 14.0
+            row_sig_h = 25.0  # Roomy signature box for 7 UIDs!
+            inv_h = 22.0
+        elif students_per_page == 8:
+            row_ab_h = 13.5
+            row_omr_h = 13.5
+            row_sig_h = 20.0  # Balanced signature box for 8 UIDs!
+            inv_h = 20.0
+        else:
+            row_ab_h = 13.0
+            row_omr_h = 13.0
+            row_sig_h = max(18.0, 25.0 - (students_per_page - 7) * 2)
+            inv_h = 20.0
+
         page_start_student = page_idx * students_per_page
         for s_idx in range(students_per_page):
             student_global_idx = page_start_student + s_idx
@@ -232,10 +248,9 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
                 break
 
             sr = R_h2 + 1 + (s_idx * 3)
-            # Budgeted heights for 7 UIDs: 14pt + 14pt + 25pt = 53pt per student (roomy signature box!)
-            ws.row_dimensions[sr].height = 14.0
-            ws.row_dimensions[sr + 1].height = 14.0
-            ws.row_dimensions[sr + 2].height = 25.0  # Roomy signature box!
+            ws.row_dimensions[sr].height = row_ab_h
+            ws.row_dimensions[sr + 1].height = row_omr_h
+            ws.row_dimensions[sr + 2].height = row_sig_h
 
             # Merge UID column across the 3 rows
             ws.merge_cells(f'A{sr}:A{sr + 2}')
@@ -260,10 +275,10 @@ def build_course_sheet(ws, course_data, global_settings, logo_path=None):
 
             apply_range_style(ws, f'A{sr}:J{sr + 2}', border=table_border)
 
-        # --- Footer 1: Invigilator's Signature & Emp.ID (22 pt) ---
+        # --- Footer 1: Invigilator's Signature & Emp.ID ---
         actual_students_drawn = students_per_page if fill_empty else min(students_per_page, max(1, total_students - page_start_student))
         R_inv = R_h2 + 1 + (actual_students_drawn * 3)
-        ws.row_dimensions[R_inv].height = 22.0
+        ws.row_dimensions[R_inv].height = inv_h
 
         ws.merge_cells(f'A{R_inv}:B{R_inv}')
         c_inv = ws.cell(R_inv, 1, "Invigilator's Signature & Emp.ID :-")

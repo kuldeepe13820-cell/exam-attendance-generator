@@ -7,10 +7,10 @@ A lightweight, automated web application tailored for universities and academic 
 
 ## 🌟 Key Features
 
-1. **Course-Wise Multi-Sheet Excel Generation**:
-   - Creates a single consolidated `.xlsx` workbook containing individual tabs/sheets for each course (e.g. `CSE-IOT`, `CSE-AI`, `ECE`, `ME`).
-   - Each course worksheet is independently paginated (7 UIDs per sheet page) with repeating headers and footers.
-   - Strictly equal box widths across all 8 exam date and subject code columns.
+1. **One-Click Switch: 7 UIDs vs 8 UIDs per Sheet**:
+   - Easily switch between **7 UIDs / Sheet** and **8 UIDs / Sheet** with a single click right on the toolbar or sidebar.
+   - Both formats feature **strictly equal box widths** across all 8 exam columns and dynamic row height budgeting for a 100% clean A4 Landscape 1-page fit.
+   - Generates multi-course Excel `.xlsx` workbooks with independent pagination and repeating headers.
 
 2. **Strict A4 Landscape Print Setup (Zero Spillover)**:
    - Configured with `fitToWidth = 1` and `fitToHeight = num_pages`.

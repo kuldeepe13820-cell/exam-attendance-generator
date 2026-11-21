@@ -170,7 +170,8 @@ def generate_excel():
         
         form = data.get('settings', {}).get('form_code', 'EX-12')
         courses_count = len(data.get('courses', []))
-        download_name = f"Exam_Attendance_Sheets_{form}_{courses_count}_Sheets_7UIDs.xlsx"
+        spp = data.get('settings', {}).get('students_per_page', 7)
+        download_name = f"Exam_Attendance_Sheets_{form}_{courses_count}_Courses_{spp}UIDs.xlsx"
 
         return send_file(
             excel_stream,

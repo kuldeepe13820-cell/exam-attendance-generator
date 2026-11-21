@@ -191,18 +191,31 @@
             </table>
           </div>
 
+          <!-- One-Click Capacity Switcher in Sidebar -->
+          <div style="margin-bottom: 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 0.8rem; font-weight: 700; color: #1e293b;">⚡ Click Sheet Capacity:</span>
+              <span id="studentStatsBadge" style="font-size: 0.75rem; font-weight: 700; color: #1d4ed8;">
+                7 Students (1 Page)
+              </span>
+            </div>
+            <div class="uid-toggle-container" style="display: flex; width: 100%; box-sizing: border-box;">
+              <button type="button" class="btn-uid-pill active" id="btnSideToggle7Uid" data-uids="7" style="flex: 1; justify-content: center;">
+                ✓ 7 UIDs / Sheet
+              </button>
+              <button type="button" class="btn-uid-pill" id="btnSideToggle8Uid" data-uids="8" style="flex: 1; justify-content: center;">
+                8 UIDs / Sheet
+              </button>
+            </div>
+          </div>
+
           <!-- Students UIDs Input -->
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <label for="inputUids" style="margin: 0;">Student UIDs (Roll Numbers)</label>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <button class="btn btn-secondary btn-sm" id="btnSortUids" style="font-size: 0.70rem; padding: 1px 5px;" title="Sort UIDs in ascending order">
-                  🔢 Sort UIDs
-                </button>
-                <span id="studentStatsBadge" style="font-size: 0.75rem; font-weight: 700; color: #1e3a8a;">
-                  7 Students (1 Page)
-                </span>
-              </div>
+              <button class="btn btn-secondary btn-sm" id="btnSortUids" style="font-size: 0.70rem; padding: 1px 6px;" title="Sort UIDs in ascending order">
+                🔢 Sort UIDs
+              </button>
             </div>
             <textarea id="inputUids" class="form-control" rows="6" placeholder="Paste UIDs here (one per line or comma/tab separated)&#10;e.g.&#10;22BCS1001&#10;22BCS1002&#10;22BCS1003"></textarea>
             <div style="display: flex; justify-content: space-between; margin-top: 6px;">
@@ -288,6 +301,19 @@
             <option value="1.0">100% (Actual)</option>
             <option value="1.15">115%</option>
           </select>
+        </div>
+
+        <div style="height: 20px; width: 1px; background: #cbd5e1;"></div>
+
+        <!-- One-Click 7 UID vs 8 UID per Sheet Selector -->
+        <div class="uid-toggle-container" title="Click to instantly switch between 7 or 8 UIDs per sheet">
+          <span style="font-size: 0.78rem; font-weight: 700; color: #475569; padding-left: 4px;">Capacity:</span>
+          <button type="button" class="btn-uid-pill active" id="btnToggle7Uid" data-uids="7">
+            ✓ 7 UIDs / Sheet
+          </button>
+          <button type="button" class="btn-uid-pill" id="btnToggle8Uid" data-uids="8">
+            8 UIDs / Sheet
+          </button>
         </div>
 
         <div style="height: 20px; width: 1px; background: #cbd5e1;"></div>

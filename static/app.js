@@ -10,7 +10,7 @@ let appData = {
     show_logo: true,
     logo_path: "static/default_logo.png",
     logo_url: "/static/default_logo.png",
-    students_per_page: 8,
+    students_per_page: 7,
     fill_empty_slots: true,
     handwritten_mode: true,
     print_scope: "all"
@@ -36,6 +36,56 @@ function showToast(message, isError = false) {
   setTimeout(() => {
     toast.style.display = 'none';
   }, 3500);
+}
+
+// 1-Click Switcher for 7 vs 8 UIDs per sheet
+function updateUidToggleUI(count) {
+  const is7 = (count === 7);
+  const is8 = (count === 8);
+
+  const toggle7Top = document.getElementById('btnToggle7Uid');
+  const toggle8Top = document.getElementById('btnToggle8Uid');
+  const toggle7Side = document.getElementById('btnSideToggle7Uid');
+  const toggle8Side = document.getElementById('btnSideToggle8Uid');
+
+  if (toggle7Top) {
+    toggle7Top.classList.toggle('active', is7);
+    toggle7Top.innerHTML = is7 ? '✓ 7 UIDs / Sheet' : '7 UIDs / Sheet';
+  }
+  if (toggle8Top) {
+    toggle8Top.classList.toggle('active', is8);
+    toggle8Top.innerHTML = is8 ? '✓ 8 UIDs / Sheet' : '8 UIDs / Sheet';
+  }
+  if (toggle7Side) {
+    toggle7Side.classList.toggle('active', is7);
+    toggle7Side.innerHTML = is7 ? '✓ 7 UIDs / Sheet' : '7 UIDs / Sheet';
+  }
+  if (toggle8Side) {
+    toggle8Side.classList.toggle('active', is8);
+    toggle8Side.innerHTML = is8 ? '✓ 8 UIDs / Sheet' : '8 UIDs / Sheet';
+  }
+
+  const btnSample = document.getElementById('btnAddSampleStudents');
+  if (btnSample) {
+    btnSample.innerText = `Add ${count} Sample UIDs`;
+  }
+}
+
+function setUidsPerPage(count, showNotification = true) {
+  count = parseInt(count, 10);
+  if (count !== 7 && count !== 8) count = 7;
+  appData.settings.students_per_page = count;
+
+  const sel = document.getElementById('selectStudentsPerPage');
+  if (sel) sel.value = count;
+
+  updateUidToggleUI(count);
+  updateStudentStats();
+  renderPreview();
+
+  if (showNotification) {
+    showToast(`Switched to ${count} UIDs per Sheet format`);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -65,6 +115,7 @@ async function loadInitialData() {
 
 function syncSettingsToInputs() {
   const s = appData.settings;
+  const spp = parseInt(s.students_per_page, 10) || 7;
   document.getElementById('inputInstName').value = s.institute_name;
   document.getElementById('inputExamTitle').value = s.exam_title;
   document.getElementById('inputFormCode').value = s.form_code;
@@ -72,7 +123,8 @@ function syncSettingsToInputs() {
   document.getElementById('inputShiftTime').value = s.shift_time;
   document.getElementById('checkShowLogo').checked = s.show_logo;
   document.getElementById('checkHandwrittenMode').checked = s.handwritten_mode;
-  document.getElementById('selectStudentsPerPage').value = s.students_per_page;
+  document.getElementById('selectStudentsPerPage').value = spp;
+  updateUidToggleUI(spp);
   document.getElementById('checkFillEmpty').checked = s.fill_empty_slots;
   document.getElementById('selectPrintScope').value = s.print_scope;
 
@@ -85,6 +137,22 @@ function syncSettingsToInputs() {
 }
 
 function setupEventListeners() {
+  // 1-Click Capacity Toggle Buttons (Toolbar & Sidebar)
+  const bindToggle = (id, count) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        setUidsPerPage(count, true);
+      });
+    }
+  };
+
+  bindToggle('btnToggle7Uid', 7);
+  bindToggle('btnToggle8Uid', 8);
+  bindToggle('btnSideToggle7Uid', 7);
+  bindToggle('btnSideToggle8Uid', 8);
+
   const bindChange = (id, prop) => {
     document.getElementById(id).addEventListener('input', (e) => {
       appData.settings[prop] = e.target.value;
@@ -122,9 +190,7 @@ function setupEventListeners() {
   });
 
   document.getElementById('selectStudentsPerPage').addEventListener('change', (e) => {
-    appData.settings.students_per_page = parseInt(e.target.value, 10);
-    updateStudentStats();
-    renderPreview();
+    setUidsPerPage(parseInt(e.target.value, 10), true);
   });
 
   document.getElementById('checkFillEmpty').addEventListener('change', (e) => {
@@ -471,10 +537,11 @@ function deleteCurrentCourse() {
 function addSampleStudents() {
   const current = getActiveCourse();
   if (!current) return;
+  const count = appData.settings.students_per_page || 7;
   const basePrefix = "24BCS";
   const startNum = 1000 + Math.floor(Math.random() * 9000);
   const newBatch = [];
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < count; i++) {
     newBatch.push(`${basePrefix}${startNum + i}`);
   }
   const currentUids = document.getElementById('inputUids').value.trim();
@@ -483,7 +550,7 @@ function addSampleStudents() {
   updateStudentStats();
   renderCourseTabs();
   renderPreview();
-  showToast("Added 8 sample student UIDs");
+  showToast(`Added ${count} sample student UIDs`);
 }
 
 function autoFillDates() {
@@ -654,9 +721,9 @@ function renderPreview() {
 
 function generatePageHtml(course, pageIndex, totalPages) {
   const s = appData.settings;
-  const spp = s.students_per_page || 8;
+  const spp = s.students_per_page || 7;
   const pageContainer = document.createElement('div');
-  pageContainer.className = 'sheet-page';
+  pageContainer.className = `sheet-page layout-${spp}uid`;
 
   const dates = course.dates || [];
   const subCodes = course.sub_codes || [];
