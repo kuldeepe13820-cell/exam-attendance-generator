@@ -392,6 +392,37 @@ function setupEventListeners() {
     });
   }
 
+  const statSelect = document.getElementById('filterStatusSelect');
+  if (statSelect) {
+    statSelect.addEventListener('change', () => {
+      updateFilterPreviewCount();
+      applyFilterToSheet(false);
+    });
+  }
+
+  // Paste Data Modal Events
+  const btnOpenPaste = document.getElementById('btnOpenPasteModal');
+  const pasteModal = document.getElementById('pasteModal');
+  const btnClosePaste = document.getElementById('btnClosePasteModal');
+  const btnCancelPaste = document.getElementById('btnCancelPaste');
+  const btnSubmitPaste = document.getElementById('btnSubmitPasteData');
+
+  if (btnOpenPaste && pasteModal) {
+    btnOpenPaste.addEventListener('click', () => {
+      pasteModal.style.display = 'flex';
+      const area = document.getElementById('pastedTableText');
+      if (area) area.focus();
+    });
+  }
+
+  const closePasteModal = () => {
+    if (pasteModal) pasteModal.style.display = 'none';
+  };
+
+  if (btnClosePaste) btnClosePaste.addEventListener('click', closePasteModal);
+  if (btnCancelPaste) btnCancelPaste.addEventListener('click', closePasteModal);
+  if (btnSubmitPaste) btnSubmitPaste.addEventListener('click', handlePastedDataSubmit);
+
   const btnApply = document.getElementById('btnApplySelection');
   if (btnApply) {
     btnApply.addEventListener('click', (e) => {
@@ -765,6 +796,61 @@ async function loadLocalBifurcation() {
   }
 }
 
+async function handlePastedDataSubmit() {
+  const area = document.getElementById('pastedTableText');
+  const text = area ? area.value.trim() : '';
+  if (!text) {
+    showToast("Please paste your table rows first.", true);
+    return;
+  }
+  const modal = document.getElementById('pasteModal');
+  try {
+    showToast("Parsing pasted ERP / Excel table...");
+    const mode = document.querySelector('input[name="uploadMode"]:checked').value || 'replace';
+    const res = await fetch('/api/parse_pasted_data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, mode })
+    });
+    const result = await res.json();
+    if (!res.ok || !result.success) {
+      showToast(result.error || "Failed to parse pasted data", true);
+      return;
+    }
+
+    if (mode === 'replace') {
+      appData.courses = result.courses;
+    } else {
+      result.courses.forEach(c => appData.courses.push(c));
+    }
+
+    if (appData.courses.length > 0) {
+      appData.activeCourseId = appData.courses[0].id;
+    }
+
+    appData.previewPage = 0;
+    if (result.metadata && result.raw_records) {
+      populateFilterDropdowns(result.metadata, result.raw_records);
+    }
+    renderCourseTabs();
+    loadCourseIntoForm(appData.activeCourseId);
+    renderPreview();
+
+    if (modal) modal.style.display = 'none';
+
+    const statusBadge = document.getElementById('uploadStatusBadge');
+    if (statusBadge && result.courses.length > 0) {
+      statusBadge.style.display = 'block';
+      statusBadge.innerHTML = `✅ Pasted ERP table imported: <b>${result.total_courses} sheet(s)</b> created for Section <b>${result.courses[0].section}</b> (${result.total_students} students total)!`;
+    }
+
+    const secName = result.courses[0] ? result.courses[0].section : 'Section';
+    showToast(`✅ Successfully imported ${result.total_students} students (Section ${secName})!`);
+  } catch (err) {
+    showToast("Error processing pasted table", true);
+  }
+}
+
 // =========================================================================
 // AUTO-FETCH & FILTER: SUBJECT, SECTION & GROUP SELECTION LOGIC
 // =========================================================================
@@ -812,6 +898,26 @@ function populateFilterDropdowns(metadata, records) {
     if (idx === 0) opt.selected = true;
     grpSelect.appendChild(opt);
   });
+
+  // 4. Populate Status / Eligibility Dropdown & Alert if Detained students exist
+  const statusGrp = document.getElementById('filterStatusGroup');
+  const detainedAlert = document.getElementById('detainedAlertBanner');
+  const detainedText = document.getElementById('detainedAlertText');
+  const statSelect = document.getElementById('filterStatusSelect');
+
+  if (metadata.detained_count > 0 || metadata.has_status_info) {
+    if (statusGrp) statusGrp.style.display = 'block';
+    if (detainedAlert) detainedAlert.style.display = 'block';
+    if (detainedText) {
+      detainedText.innerHTML = `⚠️ <b>${metadata.detained_count} Detained Students</b> detected (highlighted in ERP). Filter defaulted to Clear only.`;
+    }
+    if (statSelect && !statSelect.value) {
+      statSelect.value = 'clear';
+    }
+  } else {
+    if (statusGrp) statusGrp.style.display = 'none';
+    if (detainedAlert) detainedAlert.style.display = 'none';
+  }
 
   // Highlight the Auto-Filter box
   const box = document.getElementById('autoFilterBox');
@@ -893,16 +999,28 @@ function getFilteredStudents() {
   const subjSelect = document.getElementById('filterSubjectSelect');
   const secSelect = document.getElementById('filterSectionSelect');
   const grpSelect = document.getElementById('filterGroupSelect');
+  const statSelect = document.getElementById('filterStatusSelect');
 
   const subjSel = subjSelect ? subjSelect.value : 'all';
   const secSel = secSelect ? secSelect.value : 'all';
   const grpSel = grpSelect ? grpSelect.value : 'all';
+  const statSel = statSelect ? statSelect.value : 'clear';
 
   let filtered = appData.rawRecords.filter(r => {
     const rSubj = r.subject || r.course || '';
     const rSec = r.section || '';
+    const rStat = (r.status || 'Clear').toLowerCase();
+
     if (subjSel !== 'all' && rSubj !== subjSel) return false;
     if (secSel !== 'all' && rSec !== secSel) return false;
+
+    // Status / Eligibility filter (Clear vs All vs Detained)
+    if (statSel === 'clear') {
+      if (rStat === 'detained' || rStat === 'suspended') return false;
+    } else if (statSel === 'detained') {
+      if (rStat !== 'detained') return false;
+    }
+
     return true;
   });
 
@@ -951,17 +1069,25 @@ function updateFilterPreviewCount() {
   const subjSelect = document.getElementById('filterSubjectSelect');
   const secSelect = document.getElementById('filterSectionSelect');
   const grpSelect = document.getElementById('filterGroupSelect');
+  const statSelect = document.getElementById('filterStatusSelect');
 
   const subjSel = subjSelect ? subjSelect.value : 'all';
   const secSel = secSelect ? secSelect.value : 'all';
   const grpSel = grpSelect ? grpSelect.value : 'all';
+  const statSel = statSelect ? statSelect.value : 'clear';
 
   const subjLabel = subjSel === 'all' ? 'All Subjects' : (subjSel.length > 25 ? subjSel.substring(0, 25) + '...' : subjSel);
   const secLabel = secSel === 'all' ? 'All Secs' : secSel;
   const grpLabel = grpSel.includes('1') ? 'Group 1' : (grpSel.includes('2') ? 'Group 2' : 'All Groups');
 
+  let statLabel = '';
+  if (appData.metadata && appData.metadata.detained_count > 0) {
+    statLabel = statSel === 'clear' ? 'Clear Only' : (statSel === 'detained' ? 'Detained Only' : 'All Students');
+  }
+
   if (summaryText) {
-    summaryText.innerHTML = `<b>${subjLabel}</b> &bull; <b>${secLabel}</b> &bull; <b>${grpLabel}</b>`;
+    const statPart = statLabel ? ` &bull; <b style="color: ${statSel === 'clear' ? '#166534' : (statSel === 'detained' ? '#b91c1c' : '#1e40af')}">${statLabel}</b>` : '';
+    summaryText.innerHTML = `<b>${subjLabel}</b> &bull; <b>${secLabel}</b> &bull; <b>${grpLabel}</b>${statPart}`;
   }
 }
 

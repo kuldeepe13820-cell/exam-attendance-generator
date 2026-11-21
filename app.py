@@ -151,14 +151,44 @@ def filter_and_generate():
         subject_sel = data.get('subject', 'all')
         section_sel = data.get('section', 'all')
         group_sel = data.get('group', 'all')
+        status_sel = data.get('status', 'all')
 
-        course_obj = excel_generator.filter_and_build_course(records, subject_sel, section_sel, group_sel)
+        course_obj = excel_generator.filter_and_build_course(records, subject_sel, section_sel, group_sel, status_sel=status_sel)
         if not course_obj:
             return jsonify({"success": False, "error": "No students match the chosen filters."}), 404
 
         return jsonify({
             "success": True,
             "course": course_obj
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/parse_pasted_data', methods=['POST'])
+def parse_pasted_data():
+    try:
+        data = request.get_json(force=True) or {}
+        text = data.get('text', '')
+        if not text.strip():
+            return jsonify({"success": False, "error": "No text provided"}), 400
+
+        mode = data.get('mode', 'replace')
+        status_sel = data.get('status', 'all')
+        entries = excel_generator.parse_pasted_text(text)
+        if not entries:
+            return jsonify({"success": False, "error": "Could not detect student records. Please ensure header row has UID/Roll No."}), 400
+
+        sorted_courses = excel_generator.group_and_sort_student_entries(entries, status_sel=status_sel)
+        metadata = excel_generator.extract_metadata_from_entries(entries)
+
+        return jsonify({
+            "success": True,
+            "mode": mode,
+            "total_courses": len(sorted_courses),
+            "total_students": len(entries),
+            "metadata": metadata,
+            "raw_records": entries,
+            "courses": sorted_courses
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
